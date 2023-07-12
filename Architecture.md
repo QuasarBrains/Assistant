@@ -6,9 +6,21 @@ So how will this system work? Here's my kinda sorta plan. The system will consis
 
 A channel is a wrapper around a service or application, such as Slack, Discord, SMS, or something like that, which acts as an interface between a user or service, and the assistant. For example, if I wanted to send the chatbot a text message, or an email, I could do that through a channel. The exact structure here will be necessarily a bit ambiguous, but essentially would consist of a wrapper class that has the ability to both listen to incoming messages, and send outbound messages. A channel is designed for specifically communication.
 
+### Channel History
+Each channel will keep track of its own history. That way, individual conversations can be kept going in each channel, and both the assistant and the user will have access to the complete conversation so far. This will also be helpful if say, an action calls for texting a user about a weather alert. If the user decides that they would like more information about the weather alert, all they have to do is text back, and the assistant will have context from the previous conversation that it can use to construct a response.
+
+### Channel Lookup
+Based on the channel history, some lookup functions will be provided. The LLM's attention is not unlimited, and as the history grows, the assistant will need to be able to easily search through the conversation history to understand relevant context.
+
+### Global History
+This will get a little bit more into the global context that will be kept, but essentially, as the user has conversations accross various channels, a context will be kept across all of them. That way if the user references something that cannot be found in the channel, but was referenced in another channel, then the assistant still has the ability to find information about that.
+
 ## Services
 
 A service will be an interface for the assistant to use in order to make things happen. Essentially, the service will provide a spec, and a description, and when the assistant decides that it needs to do something other than send a message through a channel, it will choose a service, and based on the spec, make something happen through the service. Services are where the main extensibility of the assistant will be, as they can seriously be and do anything. A service is designed specifically for performing actions.
+
+### Spec
+The service will provide a list of everything it's capable of, as well as a description of itself. That way, when the assistant is choosing a service to use, it will just have to search through the service descriptions, and decide. Using ChatGPT functions might be a great use-case for this. On top of that, the spec will lay out all of the different methods that it provides, including the arguments they require, and what they return. This will probably go off of the [JSON Schema](https://json-schema.org/) standard.
 
 ## Events
 
