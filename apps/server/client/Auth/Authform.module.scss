@@ -1,0 +1,32 @@
+@use "../styles/partials/mixins" as *;
+
+.formContainer {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 24px;
+  @include backgroundRadial;
+}
+
+.form {
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (min-width: 768px) {
+    width: 50%;
+  }
+
+  &__header {
+    margin-bottom: 2.4rem;
+
+    h1 {
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  &__body {
+    padding-block: 2.4rem;
+  }
+}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>[App Name]</title>
+    <link rel="stylesheet" href="/build/bundle.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/build/bundle.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+      window.socket = socket;
+      socket.on("connect", function () {
+        console.info("connected");
+      });
+      socket.on("disconnect", function () {
+        console.info("disconnected from socketio");
+      });
+      socket.on("esbuild-rebuilt", function () {
+        console.info("Reloading due to esbuild rebuild...");
+        window.location.reload();
+      });
+    </script>
+  </body>
+</html>
