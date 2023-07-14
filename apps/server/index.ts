@@ -7,6 +7,9 @@ import { initSocketIO } from "./utils/socket.io";
 import { initializeDatabase } from "./database";
 import applicationRouter from "./routers/application";
 import apiRouter from "./routers/api";
+import { helloWorld } from "@gpt-assistant/core";
+
+console.log(helloWorld());
 
 config();
 initializeDatabase();

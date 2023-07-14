@@ -26,6 +26,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@gpt-assistant/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       axios:
         specifier: ^1.4.0
         version: 1.4.0
@@ -121,7 +124,17 @@ importers:
         specifier: ^3.12.7
         version: 3.12.7
 
-  packages/core: {}
+  packages/core:
+    devDependencies:
+      '@gpt-assistant/eslint-config-custom':
+        specifier: workspace:*
+        version: link:../eslint-config-custom
+      '@gpt-assistant/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      typescript:
+        specifier: ^5.1.3
+        version: 5.1.3
 
   packages/eslint-config-custom:
     dependencies:

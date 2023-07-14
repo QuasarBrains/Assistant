@@ -33,7 +33,8 @@
     "socket.io": "^4.6.2",
     "sqlite3": "^5.1.6",
     "typeorm": "^0.3.16",
-    "typescript": "^5.1.3"
+    "typescript": "^5.1.3",
+    "@gpt-assistant/core": "workspace:*"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
