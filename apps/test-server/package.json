@@ -18,7 +18,7 @@
     "@onyx-assistant/core": "workspace:*"
   },
   "devDependencies": {
-    "@onyx-assistant/eslint-config-custom": "workspace:*",
+    "eslint-config-custom": "workspace:*",
     "@onyx-assistant/tsconfig": "workspace:*",
     "@types/express": "^4.17.17",
     "tsx": "^3.12.7",

@@ -6,13 +6,14 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@onyx-assistant/eslint-config-custom": "workspace:*",
+    "eslint-config-custom": "workspace:*",
     "@onyx-assistant/tsconfig": "workspace:*",
     "typescript": "^5.1.3"
   },

@@ -1,11 +1,11 @@
 {
-  "name": "@onyx-assistant/eslint-config-custom",
+  "name": "eslint-config-custom",
   "version": "0.0.0",
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
+    "eslint": "latest",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-react": "7.28.0",
     "eslint-config-turbo": "^1.9.3"
   },
   "publishConfig": {
