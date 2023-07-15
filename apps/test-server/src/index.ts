@@ -1,20 +1,27 @@
-import express from "express";
 import { config } from "dotenv";
-import { helloWorld } from "@gpt-assistant/server";
+import AssistantServer from "@gpt-assistant/server";
+import Assistant from "@gpt-assistant/core";
+import Express from "express";
 
 config();
 
-console.log(helloWorld());
-
-const PORT = process.env.PORT || 3000;
-
-const app = express();
-
-app.get("/", (req, res) => {
-  return res.send({
-    message: "Welcome to GPT Assistant!",
-  });
+const assistant = new Assistant({
+  name: "Test Assistant",
 });
+
+const PORT = Number(process.env.PORT) || 3000;
+
+const assistantServer = new AssistantServer({
+  port: PORT,
+  log: true,
+  assistant,
+});
+
+const assistantRouter = assistantServer.Router();
+
+const app = Express();
+
+app.use("/assistant", assistantRouter);
 
 app.listen(PORT, () => {
   console.info(`Server listening on port ${PORT}`);
