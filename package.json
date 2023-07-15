@@ -9,10 +9,16 @@
   },
   "devDependencies": {
     "@turbo/gen": "^1.9.7",
-    "eslint-config-custom": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "prettier": "^2.5.1",
     "turbo": "latest"
   },
   "packageManager": "pnpm@7.15.0",
-  "name": "gpt-assistant"
+  "name": "gpt-assistant",
+  "eslintConfig": {
+    "extends": [
+      "turbo"
+    ]
+  }
 }

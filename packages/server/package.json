@@ -13,7 +13,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "eslint-config-custom": "workspace:*",
     "@onyx-assistant/tsconfig": "workspace:*",
     "typescript": "^5.1.3"
   },

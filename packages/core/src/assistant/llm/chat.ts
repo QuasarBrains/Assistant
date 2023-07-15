@@ -42,8 +42,6 @@ export class OpenAIChatModel extends ChatModel {
     system_prompt: string;
   }): Promise<string> {
     try {
-      console.log("Sending message to OpenAI API", message, system_prompt);
-
       const response = await this.api.createChatCompletion({
         model: this.defaultModel,
         messages: [
@@ -60,8 +58,6 @@ export class OpenAIChatModel extends ChatModel {
 
       const result =
         (await response.json()) as ResponseTypes["createChatCompletion"];
-
-      console.log("Got response from OpenAI API", result);
 
       const content = result.choices[0].message?.content;
 

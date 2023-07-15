@@ -38,7 +38,6 @@ export class Channel<Message> {
   }
 
   public recieveMessage(message: Message): void {
-    console.log("Message recieved:", message);
     this.messageListeners.forEach((cb) => cb(message, this.sendMessage));
   }
 
@@ -55,7 +54,6 @@ export class Channel<Message> {
   public async getChannelAssistantResponse(message: Message): Promise<string> {
     try {
       const prompt = await this.parseMessageToString(message);
-      console.log("Prompt:", prompt);
       const response = await this.Manager()
         ?.Assistant()
         ?.getChannelMessageResponse(prompt);
