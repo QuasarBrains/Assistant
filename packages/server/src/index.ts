@@ -1,5 +1,5 @@
 import Express, { Router } from "express";
-import Assistant from "@gpt-assistant/core";
+import Assistant from "@onyx-assistant/core";
 
 /**
  * Represents the options for the Server class.

@@ -1,6 +1,6 @@
 import { config } from "dotenv";
-import AssistantServer from "@gpt-assistant/server";
-import Assistant from "@gpt-assistant/core";
+import AssistantServer from "@onyx-assistant/server";
+import Assistant from "@onyx-assistant/core";
 import Express from "express";
 
 config();

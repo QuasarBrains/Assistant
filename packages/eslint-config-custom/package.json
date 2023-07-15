@@ -1,5 +1,5 @@
 {
-  "name": "@gpt-assistant/eslint-config-custom",
+  "name": "@onyx-assistant/eslint-config-custom",
   "version": "0.0.0",
   "main": "index.js",
   "license": "MIT",

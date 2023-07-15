@@ -1,15 +1,4 @@
-export interface AssistantOptions {
-  name: string;
-}
+import Assistant, { AssistantOptions } from "./assistant";
 
-export default class Assistant {
-  private name: string;
-
-  constructor({ name }: AssistantOptions) {
-    this.name = name;
-  }
-
-  public Name(): string {
-    return this.name;
-  }
-}
+export default Assistant;
+export type { AssistantOptions };

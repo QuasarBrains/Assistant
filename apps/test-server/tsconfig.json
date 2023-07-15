@@ -4,6 +4,6 @@
     "rootDir": "./src"
   },
   "exclude": ["node_modules"],
-  "extends": "@gpt-assistant/tsconfig/base.json",
+  "extends": "@onyx-assistant/tsconfig/base.json",
   "include": ["src"]
 }

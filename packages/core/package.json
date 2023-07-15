@@ -1,5 +1,5 @@
 {
-  "name": "@gpt-assistant/core",
+  "name": "@onyx-assistant/core",
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
@@ -13,7 +13,7 @@
   "license": "ISC",
   "devDependencies": {
     "typescript": "^5.1.3",
-    "@gpt-assistant/eslint-config-custom": "workspace:*",
-    "@gpt-assistant/tsconfig": "workspace:*"
+    "@onyx-assistant/eslint-config-custom": "workspace:*",
+    "@onyx-assistant/tsconfig": "workspace:*"
   }
 }

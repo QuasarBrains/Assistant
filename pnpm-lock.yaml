@@ -8,7 +8,7 @@ importers:
 
   .:
     devDependencies:
-      '@gpt-assistant/eslint-config-custom':
+      '@onyx-assistant/eslint-config-custom':
         specifier: workspace:*
         version: link:packages/eslint-config-custom
       '@turbo/gen':
@@ -26,7 +26,10 @@ importers:
 
   apps/test-server:
     dependencies:
-      '@gpt-assistant/server':
+      '@onyx-assistant/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@onyx-assistant/server':
         specifier: workspace:*
         version: link:../../packages/server
       dotenv:
@@ -36,10 +39,10 @@ importers:
         specifier: ^4.18.2
         version: 4.18.2
     devDependencies:
-      '@gpt-assistant/eslint-config-custom':
+      '@onyx-assistant/eslint-config-custom':
         specifier: workspace:*
         version: link:../../packages/eslint-config-custom
-      '@gpt-assistant/tsconfig':
+      '@onyx-assistant/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
       '@types/express':
@@ -54,10 +57,10 @@ importers:
 
   packages/core:
     devDependencies:
-      '@gpt-assistant/eslint-config-custom':
+      '@onyx-assistant/eslint-config-custom':
         specifier: workspace:*
         version: link:../eslint-config-custom
-      '@gpt-assistant/tsconfig':
+      '@onyx-assistant/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       typescript:
@@ -81,7 +84,7 @@ importers:
 
   packages/server:
     dependencies:
-      '@gpt-assistant/core':
+      '@onyx-assistant/core':
         specifier: workspace:*
         version: link:../core
       '@types/express':
@@ -91,10 +94,10 @@ importers:
         specifier: ^4.18.2
         version: 4.18.2
     devDependencies:
-      '@gpt-assistant/eslint-config-custom':
+      '@onyx-assistant/eslint-config-custom':
         specifier: workspace:*
         version: link:../eslint-config-custom
-      '@gpt-assistant/tsconfig':
+      '@onyx-assistant/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       typescript:

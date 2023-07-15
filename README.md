@@ -13,3 +13,7 @@ For example, if the owner recieves an email, then it's possible that an event ma
 There are many projects such as [AutoGPT](https://github.com/Significant-Gravitas/Auto-GPT), [Baby AGI](https://github.com/yoheinakajima/babyagi), and others, which employ a concept known as agents. These agents can be described as follows: a program given a goal (or agency), which it will then develop a plan in order to complete, and then use tools at its disposal to follow its plan. There are a lot of lessons to be learned from agents, and its very possible that they might even be employed as part of the project. However, there is a fundamental difference.
 
 A digital assistant does not have a goal, it has a purpose. It does not have a discrete set of steps in order to fulfill its purpose, but rather must exist in perpetuity, ready to recieve orders, or take initiative, in order to fulfill it. This is the key difference between an agent and an assistant, and why I'm creating this project.
+
+## Architecture
+
+If you're interested in the design of the system, check out [the system architecture](https://github.com/AidanTilgner/GPT-Assistant/blob/master/Architecture.md).
