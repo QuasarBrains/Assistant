@@ -21,6 +21,9 @@ const assistantRouter = assistantServer.Router();
 
 const app = Express();
 
+app.use(Express.json());
+app.use(Express.urlencoded({ extended: true }));
+
 app.use("/assistant", assistantRouter);
 
 app.listen(PORT, () => {

@@ -1,23 +1,15 @@
 import { Channel, ChannelOptions } from "./construct";
-import { defaultChannels } from "./defaults";
 
 export class ChannelManager {
   private channels: {
-    [key: string]: Channel;
-  };
+    [key: string]: Channel<any>;
+  } = {};
 
   constructor() {
     this.channels = {};
   }
 
-  public addChannel(channel: Channel): void {
+  public registerChannel<M>(channel: Channel<M>): void {
     this.channels[channel.Name()] = channel;
-  }
-
-  public initDefaultChannels(): void {
-    this.channels = {
-      ...this.channels,
-      ...defaultChannels,
-    };
   }
 }
