@@ -1,5 +1,5 @@
 import Express, { Router } from "express";
-import Assistant, { Channel } from "@onyx-assistant/core";
+import Assistant, { Channel, GlobalChannelMessage } from "@onyx-assistant/core";
 import routes from "./routes";
 
 /**
@@ -11,6 +11,10 @@ export interface ServerOptions {
   log?: boolean; // Indicates whether server logs should be enabled.
 }
 
+interface ServerChannelMessage {
+  content: string;
+}
+
 /**
  * Represents a server that handles HTTP requests.
  */
@@ -19,7 +23,8 @@ export default class Server {
   private port: number;
   private log = true;
   private assistant: Assistant;
-  private serverChannel: Channel<{ content: string }>;
+  private serverChannel: Channel<ServerChannelMessage>;
+  private serverHistory: Record<string, GlobalChannelMessage[]> = {};
 
   /**
    * Creates a new instance of the Server class.
@@ -65,11 +70,29 @@ export default class Server {
     }
   }
 
+  public defineConversationHistory(
+    conversation_id: string,
+    messages: GlobalChannelMessage[]
+  ): void {
+    this.serverHistory[conversation_id] = messages;
+  }
+
+  public getConversationHistory(conversation_id: string, count?: number) {
+    if (count) {
+      return this.serverHistory[conversation_id].slice(-count);
+    }
+    return this.serverHistory[conversation_id] || [];
+  }
+
+  public getFullConversationHistory() {
+    return this.serverHistory;
+  }
+
   /**
    * creates the server channel
    */
   public createServerChannel(): typeof this.serverChannel {
-    const serverChannel = new this.assistant.Channel<{ content: string }>({
+    const serverChannel = new this.assistant.Channel<ServerChannelMessage>({
       name: "server",
       init: () => {},
       sendMessage: (message) => {
@@ -77,6 +100,30 @@ export default class Server {
       },
       parseMessageToString: async (message) => {
         return message.content;
+      },
+      parseMessageToGlobalMessage: async (message, role) => {
+        return {
+          content: message.content,
+          role,
+        };
+      },
+      addToHistory: (history) => {
+        this.serverHistory = {
+          ...this.serverHistory,
+          ...history,
+        };
+      },
+      getFullHistory: () => {
+        return this.serverHistory;
+      },
+      defineConversationHistory: (history) => {
+        this.defineConversationHistory(
+          history.conversation_id,
+          history.messages
+        );
+      },
+      getConversationHistory: (conversation_id, count) => {
+        return this.getConversationHistory(conversation_id, count);
       },
     });
     return serverChannel;

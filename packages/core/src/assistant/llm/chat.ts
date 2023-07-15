@@ -5,6 +5,7 @@ import {
   CreateChatCompletionRequest,
 } from "openai-edge";
 import { ChatModel } from ".";
+import { GlobalChannelMessage } from "../../channels/construct";
 
 export type AllowedOpenAIChatModels = CreateChatCompletionRequest["model"];
 
@@ -69,6 +70,42 @@ export class OpenAIChatModel extends ChatModel {
     } catch (error) {
       console.error(error);
       return "An error occured.";
+    }
+  }
+
+  public async getChatResponse({
+    messages,
+  }: {
+    messages: GlobalChannelMessage[];
+  }): Promise<GlobalChannelMessage> {
+    try {
+      const response = await this.api.createChatCompletion({
+        model: this.defaultModel,
+        messages,
+      });
+
+      const result =
+        (await response.json()) as ResponseTypes["createChatCompletion"];
+
+      const content = result.choices[0].message?.content;
+
+      if (!content) {
+        return {
+          role: "assistant",
+          content: "An error occured.",
+        };
+      }
+
+      return {
+        role: "assistant",
+        content,
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        role: "assistant",
+        content: "An error occured.",
+      };
     }
   }
 }

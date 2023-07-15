@@ -25,21 +25,47 @@ router.get("/", (req, res) => {
 router.post("/message", async (req, res) => {
   try {
     const { serverChannel } = getBodyFeatures(req);
-    const message = req.body.message;
+    const message = req.body.message as string;
+    const conversation_id =
+      req.body.conversation_id || req.query.conversation_id;
+
+    if (!message) {
+      return res.status(400).send({
+        message: "No message provided.",
+      });
+    }
+
+    if (!conversation_id) {
+      return res.status(400).send({
+        message:
+          "No conversation_id provided. Add conversation_id to the query string or body.",
+      });
+    }
 
     serverChannel.recieveMessage({
       content: message,
     });
 
-    const response = await serverChannel.getChannelAssistantResponse({
-      content: message,
+    const history = serverChannel.getConversationHistory(conversation_id);
+
+    const response = await serverChannel.getAssistantResponseAndRecord({
+      messages: [
+        ...history,
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+      conversation_id,
     });
+
+    const newHistory = serverChannel.getConversationHistory(conversation_id);
 
     return res.send({
       message: "Message recieved.",
       data: {
-        original_message: message,
-        response,
+        conversation: newHistory,
+        response: response.content,
       },
     });
   } catch (error) {

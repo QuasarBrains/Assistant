@@ -1,5 +1,5 @@
 import { ChannelManager } from "../channels";
-import { Channel } from "../channels/construct";
+import { Channel, GlobalChannelMessage } from "../channels/construct";
 import { OpenAIChatModel } from "./llm/chat";
 
 export type AvailableModels = OpenAIChatModel;
@@ -32,7 +32,7 @@ export default class Assistant {
     this.channelManager.registerChannel<M>(channel);
   }
 
-  public async getChannelMessageResponse(message: string): Promise<string> {
+  public async getChatResponseSimple(message: string): Promise<string> {
     try {
       const response = await this.model.getChatResponseSimple({
         message,
@@ -42,6 +42,23 @@ export default class Assistant {
     } catch (error) {
       console.error(error);
       return "An error occured.";
+    }
+  }
+
+  public async getChatResponse(
+    messages: GlobalChannelMessage[]
+  ): Promise<GlobalChannelMessage> {
+    try {
+      const response = await this.model.getChatResponse({
+        messages,
+      });
+      return response;
+    } catch (error) {
+      console.error(error);
+      return {
+        role: "system",
+        content: "An error occured.",
+      };
     }
   }
 }

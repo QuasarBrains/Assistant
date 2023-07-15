@@ -1,32 +1,77 @@
+import { CreateChatCompletionRequest } from "openai-edge";
 import { ChannelManager } from ".";
 
+export type GlobalChannelMessage = {
+  content: string;
+  role: "system" | "user" | "assistant";
+};
 export interface ChannelOptions<Message> {
   name: string;
   init: () => void;
-  sendMessage: (message: Message) => void;
+  sendMessage: (message: GlobalChannelMessage) => void;
   parseMessageToString: (message: Message) => Promise<string>;
+  parseMessageToGlobalMessage: (
+    message: Message,
+    role: GlobalChannelMessage["role"]
+  ) => Promise<GlobalChannelMessage>;
+  defineConversationHistory: (history: {
+    conversation_id: string;
+    messages: GlobalChannelMessage[];
+  }) => void;
+  addToHistory: (history: Record<string, GlobalChannelMessage[]>) => void;
+  getFullHistory: () => Record<string, GlobalChannelMessage[]>;
+  getConversationHistory: (
+    conversation_id: string,
+    count?: number
+  ) => GlobalChannelMessage[];
 }
 
 export class Channel<Message> {
   private name: string;
   private messageListeners: Array<
-    (message: Message, sendMessage: (message: Message) => void) => void
+    (
+      message: GlobalChannelMessage,
+      sendMessage: (message: GlobalChannelMessage) => void
+    ) => void
   > = [];
   private manager: ChannelManager | undefined;
   public init: () => void;
-  public sendMessage: (message: Message) => void;
+  public sendMessage: (message: GlobalChannelMessage) => void;
   public parseMessageToString: (message: Message) => Promise<string>;
+  public parseMessageToGlobalMessage: (
+    message: Message,
+    role: GlobalChannelMessage["role"]
+  ) => Promise<GlobalChannelMessage>;
+  public defineConversationHistory: (history: {
+    conversation_id: string;
+    messages: GlobalChannelMessage[];
+  }) => void;
+  public getFullHistory: (
+    count: number
+  ) => Record<string, GlobalChannelMessage[]>;
+  public getConversationHistory: (
+    conversation_id: string,
+    count?: number
+  ) => GlobalChannelMessage[];
 
   constructor({
     name,
     init,
     sendMessage,
     parseMessageToString,
+    defineConversationHistory,
+    getFullHistory,
+    getConversationHistory,
+    parseMessageToGlobalMessage,
   }: ChannelOptions<Message>) {
     this.name = name;
     this.init = init;
     this.sendMessage = sendMessage;
     this.parseMessageToString = parseMessageToString;
+    this.parseMessageToGlobalMessage = parseMessageToGlobalMessage;
+    this.defineConversationHistory = defineConversationHistory;
+    this.getFullHistory = getFullHistory;
+    this.getConversationHistory = getConversationHistory;
   }
 
   public Name(): string {
@@ -37,12 +82,16 @@ export class Channel<Message> {
     return this.manager;
   }
 
-  public recieveMessage(message: Message): void {
-    this.messageListeners.forEach((cb) => cb(message, this.sendMessage));
+  public async recieveMessage(message: Message): Promise<void> {
+    const parsed = await this.parseMessageToGlobalMessage(message, "user");
+    this.messageListeners.forEach((cb) => cb(parsed, this.sendMessage));
   }
 
   public addMessageListener(
-    cb: (message: Message, sendMessage: (message: Message) => void) => void
+    cb: (
+      message: GlobalChannelMessage,
+      sendMessage: (message: GlobalChannelMessage) => void
+    ) => void
   ): void {
     this.messageListeners.push(cb);
   }
@@ -51,16 +100,48 @@ export class Channel<Message> {
     this.manager = manager;
   }
 
-  public async getChannelAssistantResponse(message: Message): Promise<string> {
+  public async getAssistantResponse(
+    messages: GlobalChannelMessage[]
+  ): Promise<GlobalChannelMessage> {
     try {
-      const prompt = await this.parseMessageToString(message);
       const response = await this.Manager()
         ?.Assistant()
-        ?.getChannelMessageResponse(prompt);
-      return response || "An error occured.";
+        ?.getChatResponse(messages);
+      return (
+        response || {
+          role: "assistant",
+          content: "An error occured.",
+        }
+      );
     } catch (error) {
       console.error(error);
-      return "An error occured.";
+      return {
+        role: "assistant",
+        content: "An error occured.",
+      };
+    }
+  }
+
+  public async getAssistantResponseAndRecord({
+    messages,
+    conversation_id,
+  }: {
+    messages: GlobalChannelMessage[];
+    conversation_id: string;
+  }): Promise<GlobalChannelMessage> {
+    try {
+      const response = await this.getAssistantResponse(messages);
+      this.defineConversationHistory({
+        conversation_id,
+        messages: [...messages, response],
+      });
+      return response;
+    } catch (error) {
+      console.error(error);
+      return {
+        role: "assistant",
+        content: "An error occured.",
+      };
     }
   }
 }
