@@ -75,6 +75,9 @@ export default class Server {
       sendMessage: (message) => {
         return message;
       },
+      parseMessageToString: async (message) => {
+        return message.content;
+      },
     });
     return serverChannel;
   }

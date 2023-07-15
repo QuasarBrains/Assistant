@@ -2,6 +2,11 @@
 
 An infinately extendable assistant for your computer and life, powered by Large Language Models.
 
+## Roadmap
+
+**Current Version**: pre-release
+Currently, this library is pre-release, and not considered functional. Give me a bit of time to get a good demo up and running :)
+
 ## Description
 
 GPT Assistant is a virtual assistant, not much new about that. The important thing is the extensibility of the tools that the assistant has access to, and the interfaces that it will exist on. Eventually, the goal is to have an autonomous AI agent, that exists to serve the owner, and doesn't require supervision.

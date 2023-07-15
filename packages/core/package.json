@@ -12,8 +12,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "typescript": "^5.1.3",
     "@onyx-assistant/eslint-config-custom": "workspace:*",
-    "@onyx-assistant/tsconfig": "workspace:*"
+    "@onyx-assistant/tsconfig": "workspace:*",
+    "typescript": "^5.1.3"
+  },
+  "dependencies": {
+    "openai-edge": "^1.2.0"
   }
 }

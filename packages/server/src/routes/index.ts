@@ -31,10 +31,15 @@ router.post("/message", async (req, res) => {
       content: message,
     });
 
+    const response = await serverChannel.getChannelAssistantResponse({
+      content: message,
+    });
+
     return res.send({
       message: "Message recieved.",
       data: {
         original_message: message,
+        response,
       },
     });
   } catch (error) {

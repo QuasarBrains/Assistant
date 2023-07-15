@@ -5,8 +5,15 @@ import Express from "express";
 
 config();
 
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error("OPENAI_API_KEY not set, create a .env file and set it.");
+}
+
 const assistant = new Assistant({
   name: "Test Assistant",
+  model: new Assistant.ChatModels.OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  }),
 });
 
 const PORT = Number(process.env.PORT) || 3000;
