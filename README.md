@@ -1,17 +1,18 @@
 # GPT Assistant
 
-An infinately extendable assistant for your computer and life, powered by Large Language Models.
+An infinitely extendable assistant framework to automate your life.
 
-## Roadmap
+## Pre-Release
 
-**Current Version**: pre-release
-Currently, this library is pre-release, and not considered functional. Give me a bit of time to get a good demo up and running :)
+**Onyx Assistant is currently pre-release!**. There is some core functionality, but there's still a long way to go until it's ready to be used. No garuntee of backward's compatibility can be given at this time, as the kinks are worked out and the framework is stress tested. If you're interested in helping out, or testing it pre-release, [send me an email](mailto:aidantilgner02@gmail.com), or hmu some other way for more details.
+
+Check out [the roadmap](https://github.com/AidanTilgner/GPT-Assistant/blob/master/Roadmap.md) for more info.
 
 ## Description
 
-GPT Assistant is a virtual assistant, not much new about that. The important thing is the extensibility of the tools that the assistant has access to, and the interfaces that it will exist on. Eventually, the goal is to have an autonomous AI agent, that exists to serve the owner, and doesn't require supervision.
+Onyx Assistant is a declarative framework for building out complex, powerful digital assistants. Acting as a wrapper around a language model of choice, most noteably `gpt-4`, or `gpt-3.5-turbo`, the Onyx Assistant framework provides additional functionality and utilities to extend the model. Most noteably, the model will have access to [`Services`](https://github.com/AidanTilgner/GPT-Assistant/blob/master/documentation/Services.md), [`Events`](https://github.com/AidanTilgner/GPT-Assistant/blob/master/documentation/Events.md), and [`Channels`](https://github.com/AidanTilgner/GPT-Assistant/blob/master/documentation/Channels.md). Through a combination of these core utilities, your assistant will be able to communicate with you (channels), pay attentiont to the world (events), and take action in any way possible through software (services).
 
-For example, if the owner recieves an email, then it's possible that an event may be dispatched with information to the assistant, which can then parse the email, summarize it, and send a text to the owner. The owner could then reply and say to respond in a certain manner, and the assistant would be able to. This kind of functionality would require a complex, flexible, and extensible architecture, which would be fundamentally different than currently existing agents.
+There will be prebuilt services, channels, and events, as well as other helpful functionality to get off the ground easily. However, the infinitely extendable aspect of Onyx Assistant is the ability to easily add your own functionality. You can add Channels to let your assistant communicate with you in new ways. Services will let you connect your assistant to any API, shell script, or other application you're willing to build an implementation for. And Events will let you define things that may happen which your assistant should pay attention to, as well as how to react.
 
 ## What about Agents?
 
