@@ -11,6 +11,8 @@ export interface AssistantOptions {
   model: AvailableModels;
 }
 
+export { Service, Channel };
+
 export default class Assistant {
   private name: string;
   private channelManager: ChannelManager;

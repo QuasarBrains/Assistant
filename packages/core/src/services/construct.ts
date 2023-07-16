@@ -1,23 +1,30 @@
 import { ServiceManager } from ".";
+import { JSONSchema } from "../types/jsonschema";
 
-export interface ServiceSchema {}
+export interface ServiceSchema {
+  methods: {
+    name: string;
+    description: string;
+    parameters: JSONSchema;
+  }[];
+}
 
 export interface ServiceOptions {
   name: string;
   description: string;
-  schematic: ServiceSchema;
+  schema: ServiceSchema;
 }
 
-export class Service {
+export abstract class Service {
   private name: string;
   private description: string;
-  private schematic: ServiceSchema;
+  private schema: ServiceSchema;
   private manager: ServiceManager | undefined;
 
-  constructor({ name, description, schematic }: ServiceOptions) {
+  constructor({ name, description, schema }: ServiceOptions) {
     this.name = name;
     this.description = description;
-    this.schematic = schematic;
+    this.schema = schema;
   }
 
   public registerManager(manager: ServiceManager): void {
@@ -32,7 +39,7 @@ export class Service {
     return this.description;
   }
 
-  public Schematic() {
-    return this.schematic;
+  public Schema() {
+    return this.schema;
   }
 }

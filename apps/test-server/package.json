@@ -12,10 +12,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@onyx-assistant/core": "workspace:*",
     "@onyx-assistant/server": "workspace:*",
+    "axios": "^1.4.0",
     "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "@onyx-assistant/core": "workspace:*"
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "@onyx-assistant/tsconfig": "workspace:*",

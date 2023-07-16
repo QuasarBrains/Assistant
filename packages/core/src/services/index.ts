@@ -33,4 +33,15 @@ export class ServiceManager {
       this.registerService(service);
     });
   }
+
+  public getAllServicesDescribed() {
+    const descriptions = Object.values(this.services).map((service) => {
+      return {
+        name: service.Name(),
+        description: service.Description(),
+      };
+    });
+
+    return descriptions;
+  }
 }

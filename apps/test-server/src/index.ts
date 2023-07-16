@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import AssistantServer from "@onyx-assistant/server";
 import Assistant from "@onyx-assistant/core";
 import Express from "express";
+import services from "./services";
 
 config();
 
@@ -10,11 +11,14 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 const assistant = new Assistant({
-  name: "Test Assistant",
+  name: "Onyx",
   model: new Assistant.ChatModels.OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+    defaultModel: "gpt-4",
   }),
 });
+
+assistant.ServiceManager().registerServices(services);
 
 const PORT = Number(process.env.PORT) || 3000;
 
