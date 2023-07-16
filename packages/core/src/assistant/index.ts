@@ -32,6 +32,10 @@ export default class Assistant {
     this.channelManager.registerChannel<M>(channel);
   }
 
+  public registerChannels<M>(channels: Channel<M>[]): void {
+    this.channelManager.registerChannels<M>(channels);
+  }
+
   public async getChatResponseSimple(message: string): Promise<string> {
     try {
       const response = await this.model.getChatResponseSimple({

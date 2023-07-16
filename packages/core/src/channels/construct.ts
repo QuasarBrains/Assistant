@@ -7,6 +7,7 @@ export type GlobalChannelMessage = {
 };
 export interface ChannelOptions<Message> {
   name: string;
+  description: string;
   init: () => void;
   sendMessage: (message: GlobalChannelMessage) => void;
   parseMessageToString: (message: Message) => Promise<string>;
@@ -28,6 +29,7 @@ export interface ChannelOptions<Message> {
 
 export class Channel<Message> {
   private name: string;
+  private description: string;
   private messageListeners: Array<
     (
       message: GlobalChannelMessage,
@@ -56,6 +58,7 @@ export class Channel<Message> {
 
   constructor({
     name,
+    description,
     init,
     sendMessage,
     parseMessageToString,
@@ -65,6 +68,7 @@ export class Channel<Message> {
     parseMessageToGlobalMessage,
   }: ChannelOptions<Message>) {
     this.name = name;
+    this.description = description;
     this.init = init;
     this.sendMessage = sendMessage;
     this.parseMessageToString = parseMessageToString;

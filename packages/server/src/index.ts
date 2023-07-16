@@ -94,6 +94,8 @@ export default class Server {
   public createServerChannel(): typeof this.serverChannel {
     const serverChannel = new this.assistant.Channel<ServerChannelMessage>({
       name: "server",
+      description:
+        "Allows interaction with the user via HTTP requests. Has an endpoint open that allows for messages to be sent, and assistant replies will be sent back as responses.",
       init: () => {},
       sendMessage: (message) => {
         return message;

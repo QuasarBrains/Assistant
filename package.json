@@ -20,5 +20,9 @@
     "extends": [
       "turbo"
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AidanTilgner/Onyx-Assistant"
   }
 }

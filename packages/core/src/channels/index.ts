@@ -21,8 +21,17 @@ export class ChannelManager {
   }
 
   public registerChannel<M>(channel: Channel<M>): void {
+    if (this.channels[channel.Name()]) {
+      throw new Error(`Channel with name ${channel.Name()} already exists.`);
+    }
     channel.registerManager(this);
     this.channels[channel.Name()] = channel;
+  }
+
+  public registerChannels<M>(channels: Channel<M>[]): void {
+    channels.forEach((channel) => {
+      this.registerChannel(channel);
+    });
   }
 
   public getChannel<M>(channelName: string): Channel<M> {
