@@ -92,7 +92,7 @@ export default class Server {
    * creates the server channel
    */
   public createServerChannel(): typeof this.serverChannel {
-    const serverChannel = new this.assistant.Channel<ServerChannelMessage>({
+    const serverChannel = new Assistant.Channel<ServerChannelMessage>({
       name: "server",
       description:
         "Allows interaction with the user via HTTP requests. Has an endpoint open that allows for messages to be sent, and assistant replies will be sent back as responses.",
@@ -135,7 +135,7 @@ export default class Server {
    * Initializes the server channel.
    */
   public initServerChannel(): void {
-    this.assistant.registerChannel(this.serverChannel);
+    this.assistant.ChannelManager().registerChannel(this.serverChannel);
   }
 
   /**

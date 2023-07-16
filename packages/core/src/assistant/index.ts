@@ -1,6 +1,8 @@
 import { ChannelManager } from "../channels";
+import { ServiceManager } from "../services";
 import { Channel, GlobalChannelMessage } from "../channels/construct";
 import { OpenAIChatModel } from "./llm/chat";
+import { Service } from "../services/construct";
 
 export type AvailableModels = OpenAIChatModel;
 
@@ -12,8 +14,10 @@ export interface AssistantOptions {
 export default class Assistant {
   private name: string;
   private channelManager: ChannelManager;
+  private serviceManager: ServiceManager;
   private model: AvailableModels;
-  public Channel = Channel;
+  public static Channel = Channel;
+  public static Service = Service;
   public static ChatModels = {
     OpenAI: OpenAIChatModel,
   };
@@ -21,6 +25,7 @@ export default class Assistant {
   constructor({ name, model }: AssistantOptions) {
     this.name = name;
     this.channelManager = new ChannelManager({ assistant: this });
+    this.serviceManager = new ServiceManager({ assistant: this });
     this.model = model;
   }
 
@@ -28,12 +33,12 @@ export default class Assistant {
     return this.name;
   }
 
-  public registerChannel<M>(channel: Channel<M>): void {
-    this.channelManager.registerChannel<M>(channel);
+  public ChannelManager(): ChannelManager {
+    return this.channelManager;
   }
 
-  public registerChannels<M>(channels: Channel<M>[]): void {
-    this.channelManager.registerChannels<M>(channels);
+  public ServiceManager(): ServiceManager {
+    return this.serviceManager;
   }
 
   public async getChatResponseSimple(message: string): Promise<string> {
