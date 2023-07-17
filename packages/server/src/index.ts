@@ -26,7 +26,18 @@ export default class Server {
   private log = true;
   private assistant: Assistant;
   private serverChannel: Channel<ServerChannelMessage>;
-  private serverHistory: Record<string, GlobalChannelMessage[]> = {};
+  private serverHistory: Record<string, GlobalChannelMessage[]> = {
+    test: [
+      {
+        role: "assistant",
+        content: "Hello, how are you?",
+      },
+      {
+        role: "user",
+        content: "I'm good, how are you?",
+      },
+    ],
+  };
   private webhook_url: string;
 
   /**

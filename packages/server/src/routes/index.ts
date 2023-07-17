@@ -74,4 +74,30 @@ router.post("/message", async (req, res) => {
   }
 });
 
+router.get("/history", (req, res) => {
+  try {
+    const { serverChannel } = getBodyFeatures(req);
+    const conversation_id =
+      req.body.conversation_id || req.query.conversation_id;
+    if (conversation_id) {
+      const history = serverChannel.getConversationHistory(conversation_id);
+      return res.send({
+        message: "Conversation history retrieved.",
+        data: history,
+      });
+    }
+    const history = serverChannel.getFullHistory();
+
+    return res.send({
+      message: "Full conversation history retrieved.",
+      data: history,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      message: "Internal server error.",
+    });
+  }
+});
+
 export default router;

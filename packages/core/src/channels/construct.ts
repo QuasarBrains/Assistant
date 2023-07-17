@@ -48,9 +48,7 @@ export class Channel<Message> {
     conversation_id: string;
     messages: GlobalChannelMessage[];
   }) => void;
-  public getFullHistory: (
-    count: number
-  ) => Record<string, GlobalChannelMessage[]>;
+  public getFullHistory: () => Record<string, GlobalChannelMessage[]>;
   public getConversationHistory: (
     conversation_id: string,
     count?: number

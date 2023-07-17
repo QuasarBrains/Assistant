@@ -18,7 +18,7 @@ export class Pipeline {
       if (planOfAction) {
         return planOfAction.Describe();
       }
-      return "There was an error processing your message.";
+      return "A plan of action was not created.";
     } catch (error) {
       console.error(error);
       return "There was an error processing your message.";
@@ -58,13 +58,13 @@ export class Pipeline {
             - STEP 4: Use knowledge to formulate a response to the user's question (REQUIRED)
             - STEP 5: Send the response to the user (REQUIRED)
 
-            A REQUIRED step is one that must be completed in order for the plan of action to be considered complete.
+            * Keep in mind that this formatting is not your expected output, and you should instead follow the function call format below.
+
+            A REQUIRED step is one that must be completed in order for the plan of action to be considered complete, and subsequent steps will not be performed until it is complete.
             An OPTIONAL step is one that should be attempted to better respond to the user, but ultimately can be skipped.
 
             Your job is not to define the exact methods of completing each step, but just to define a high-level plan.
             The order of the steps is important! Steps will be executed in the order that they are defined.
-            A step marked REQUIRED will not be skipped, and will be executed before the next step is attempted.
-            A step marked OPTIONAL will be skipped if it cannot be completed, and the next step will be attempted.
             Also keep in mind that the plan of action should have as many steps as necessary to properly respond, but also as few steps as possible.
             
             Remember, the goal of the plan of action is to outline the steps that an agent will use to accomplish a certain task.
@@ -116,6 +116,9 @@ export class Pipeline {
             },
           },
         ],
+        function_call: {
+          name: "generate_plan_of_action",
+        },
       });
 
       if (!response) {
