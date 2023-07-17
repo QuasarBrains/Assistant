@@ -37,4 +37,12 @@ export class ChannelManager {
   public getChannel<M>(channelName: string): Channel<M> {
     return this.channels[channelName];
   }
+
+  public getAllChannelsDescribed() {
+    const descriptions = Object.values(this.channels).map((channel) => {
+      return `- ${channel.Name()}: ${channel.Description()}`;
+    });
+
+    return descriptions;
+  }
 }

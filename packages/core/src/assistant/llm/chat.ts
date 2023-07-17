@@ -12,6 +12,7 @@ export type AllowedOpenAIChatModels = CreateChatCompletionRequest["model"];
 export interface OpenAIOptions {
   apiKey: string;
   defaultModel?: AllowedOpenAIChatModels;
+  secondaryModel?: AllowedOpenAIChatModels;
   allowModels?: AllowedOpenAIChatModels[];
 }
 
@@ -19,12 +20,19 @@ export class OpenAIChatModel extends ChatModel {
   private configuration: Configuration;
   private allowedModels: string[] | undefined;
   private defaultModel: string;
+  private secondaryModel: string;
   private api: OpenAIApi;
 
-  constructor({ allowModels, apiKey, defaultModel }: OpenAIOptions) {
+  constructor({
+    allowModels,
+    apiKey,
+    defaultModel,
+    secondaryModel,
+  }: OpenAIOptions) {
     super();
     this.allowedModels = allowModels;
     this.defaultModel = defaultModel || "gpt-4";
+    this.secondaryModel = secondaryModel || "gpt-3.5-turbo";
     this.configuration = new Configuration({
       apiKey,
     });
@@ -33,6 +41,14 @@ export class OpenAIChatModel extends ChatModel {
 
   public getAPI(): OpenAIApi {
     return this.api;
+  }
+
+  public DefaultModel() {
+    return this.defaultModel;
+  }
+
+  public SecondaryModel() {
+    return this.secondaryModel;
   }
 
   public async getChatResponseSimple({
@@ -106,6 +122,19 @@ export class OpenAIChatModel extends ChatModel {
         role: "assistant",
         content: "An error occured.",
       };
+    }
+  }
+
+  public async createChatCompletion(req: CreateChatCompletionRequest) {
+    try {
+      const res = await this.api.createChatCompletion(req);
+
+      const data = (await res.json()) as ResponseTypes["createChatCompletion"];
+
+      return data;
+    } catch (error) {
+      console.error(error);
+      return undefined;
     }
   }
 }

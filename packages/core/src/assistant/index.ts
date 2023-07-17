@@ -3,6 +3,8 @@ import { ServiceManager } from "../services";
 import { Channel, GlobalChannelMessage } from "../channels/construct";
 import { OpenAIChatModel } from "./llm/chat";
 import { Service } from "../services/construct";
+import { Pipeline } from "./pipeline";
+import { PlanOfAction } from "./agents/planofaction";
 
 export type AvailableModels = OpenAIChatModel;
 
@@ -18,17 +20,20 @@ export default class Assistant {
   private channelManager: ChannelManager;
   private serviceManager: ServiceManager;
   private model: AvailableModels;
+  private pipeline: Pipeline;
   public static Channel = Channel;
   public static Service = Service;
+  public static PlanOfAction = PlanOfAction;
   public static ChatModels = {
     OpenAI: OpenAIChatModel,
   };
 
   constructor({ name, model }: AssistantOptions) {
     this.name = name;
+    this.model = model;
     this.channelManager = new ChannelManager({ assistant: this });
     this.serviceManager = new ServiceManager({ assistant: this });
-    this.model = model;
+    this.pipeline = new Pipeline({ assistant: this });
   }
 
   public Name(): string {
@@ -41,6 +46,14 @@ export default class Assistant {
 
   public ServiceManager(): ServiceManager {
     return this.serviceManager;
+  }
+
+  public Model() {
+    return this.model;
+  }
+
+  public Pipeline() {
+    return this.pipeline;
   }
 
   public async getChatResponseSimple(message: string): Promise<string> {
@@ -64,6 +77,27 @@ export default class Assistant {
         messages,
       });
       return response;
+    } catch (error) {
+      console.error(error);
+      return {
+        role: "system",
+        content: "An error occured.",
+      };
+    }
+  }
+
+  public async getAssistantResponse(
+    messages: GlobalChannelMessage[]
+  ): Promise<GlobalChannelMessage> {
+    try {
+      const pipelineResponse = await this.pipeline.userMessage(messages);
+
+      const response = pipelineResponse;
+
+      return {
+        role: "assistant",
+        content: response,
+      };
     } catch (error) {
       console.error(error);
       return {

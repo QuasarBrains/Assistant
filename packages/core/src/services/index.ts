@@ -36,10 +36,7 @@ export class ServiceManager {
 
   public getAllServicesDescribed() {
     const descriptions = Object.values(this.services).map((service) => {
-      return {
-        name: service.Name(),
-        description: service.Description(),
-      };
+      return `- ${service.Name()}: ${service.Description()}`;
     });
 
     return descriptions;

@@ -82,6 +82,10 @@ export class Channel<Message> {
     return this.name;
   }
 
+  public Description(): string {
+    return this.description;
+  }
+
   public Manager(): ChannelManager | undefined {
     return this.manager;
   }
@@ -110,7 +114,7 @@ export class Channel<Message> {
     try {
       const response = await this.Manager()
         ?.Assistant()
-        ?.getChatResponse(messages);
+        ?.getAssistantResponse(messages);
       return (
         response || {
           role: "assistant",
