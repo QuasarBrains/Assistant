@@ -1,6 +1,7 @@
 import Express, { Router } from "express";
 import Assistant, { Channel, GlobalChannelMessage } from "@onyx-assistant/core";
 import routes from "./routes";
+import axios from "axios";
 
 /**
  * Represents the options for the Server class.
@@ -8,6 +9,7 @@ import routes from "./routes";
 export interface ServerOptions {
   port: number; // The port number on which the server should listen.
   assistant: Assistant; // The assistant instance to use.
+  webhook_url: string; // The webhook URL the server channel will use to send messages.
   log?: boolean; // Indicates whether server logs should be enabled.
 }
 
@@ -25,16 +27,18 @@ export default class Server {
   private assistant: Assistant;
   private serverChannel: Channel<ServerChannelMessage>;
   private serverHistory: Record<string, GlobalChannelMessage[]> = {};
+  private webhook_url: string;
 
   /**
    * Creates a new instance of the Server class.
    * @param {ServerOptions} options - The server options.
    */
-  constructor({ port, log, assistant }: ServerOptions) {
+  constructor({ port, log, assistant, webhook_url }: ServerOptions) {
     this.router = Router();
     this.port = port;
     this.log = log || true;
     this.assistant = assistant;
+    this.webhook_url = webhook_url;
     this.serverChannel = this.createServerChannel();
     this.init();
   }
@@ -98,6 +102,12 @@ export default class Server {
         "Allows interaction with the user via HTTP requests. Has an endpoint open that allows for messages to be sent, and assistant replies will be sent back as responses.",
       init: () => {},
       sendMessage: (message) => {
+        axios.post(this.webhook_url, {
+          message: "Your message has been processed.",
+          data: {
+            ...message,
+          },
+        });
         return message;
       },
       parseMessageToString: async (message) => {

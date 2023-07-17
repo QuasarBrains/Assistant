@@ -66,6 +66,9 @@ export class Pipeline {
             A step marked REQUIRED will not be skipped, and will be executed before the next step is attempted.
             A step marked OPTIONAL will be skipped if it cannot be completed, and the next step will be attempted.
             Also keep in mind that the plan of action should have as many steps as necessary to properly respond, but also as few steps as possible.
+            
+            Remember, the goal of the plan of action is to outline the steps that an agent will use to accomplish a certain task.
+            Therefore, it shouldn't involve more steps than required to accomplish a specific task, and should be designed to terminate after said task is completed.
             `,
           },
           {
@@ -132,12 +135,11 @@ export class Pipeline {
         return undefined;
       }
 
-      console.log("PLAN OF ACTION ARGS: ", args);
-
       const parsedArgs = JSON.parse(args);
 
       const planOfAction = new Assistant.PlanOfAction({
-        ...parsedArgs,
+        title: parsedArgs.title,
+        steps: parsedArgs.steps,
       });
 
       return planOfAction;
@@ -211,8 +213,6 @@ export class Pipeline {
       if (!args) {
         return undefined;
       }
-
-      console.log("Decision Function Args: ", args);
 
       const parsedArgs = JSON.parse(args);
 

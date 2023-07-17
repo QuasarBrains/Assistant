@@ -1,5 +1,5 @@
 export interface PlanOfActionDefinition {
-  name: string;
+  title: string;
   steps: {
     description: string;
     required: boolean;
@@ -7,16 +7,16 @@ export interface PlanOfActionDefinition {
 }
 
 export class PlanOfAction {
-  private name: PlanOfActionDefinition["name"];
+  private title: PlanOfActionDefinition["title"];
   private steps: PlanOfActionDefinition["steps"];
 
-  constructor({ name, steps }: PlanOfActionDefinition) {
-    this.name = name;
+  constructor({ title, steps }: PlanOfActionDefinition) {
+    this.title = title;
     this.steps = steps;
   }
 
-  public Name() {
-    return this.name;
+  public Title() {
+    return this.title;
   }
 
   public Steps() {
@@ -24,11 +24,11 @@ export class PlanOfAction {
   }
 
   public Describe() {
-    return `
-    Name: ${this.name}
-    Steps: ${this.steps
+    return `Title: ${this.title}
+    Steps:
+    ${this.steps
       .map((step) => {
-        return `${step.description} (${
+        return `- ${step.description} (${
           step.required ? "REQUIRED" : "OPTIONAL"
         })`;
       })

@@ -1,0 +1,46 @@
+body {
+}
+
+#chat-form {
+  position: fixed;
+  bottom: 0;
+  right: 24px;
+  left: 24px;
+}
+
+#chat-loading {
+  display: none;
+  background-color: var(--switch-background-color);
+
+  padding: 24px;
+  text-align: center;
+  margin: 0;
+}
+
+#chat-history {
+  box-sizing: border-box;
+  padding: 0;
+  list-style-type: none;
+  width: 100%;
+  margin: 0;
+
+  .chat-item {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    padding: 24px;
+    font-size: 16px;
+
+    @media screen and (min-width: 768px) {
+      padding: 24px 20%;
+    }
+  }
+
+  .assistant {
+    background-color: var(--switch-background-color);
+  }
+
+  .user {
+    background-color: var(--background-color);
+  }
+}

@@ -48,25 +48,23 @@ router.post("/message", async (req, res) => {
 
     const history = serverChannel.getConversationHistory(conversation_id);
 
-    const response = await serverChannel.getAssistantResponseAndRecord({
-      messages: [
-        ...history,
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-      conversation_id,
-    });
-
-    const newHistory = serverChannel.getConversationHistory(conversation_id);
+    serverChannel
+      .getAssistantResponseAndRecord({
+        messages: [
+          ...history,
+          {
+            role: "user",
+            content: message,
+          },
+        ],
+        conversation_id,
+      })
+      .then((message) => {
+        serverChannel.sendMessage(message);
+      });
 
     return res.send({
       message: "Message recieved.",
-      data: {
-        conversation: newHistory,
-        response: response.content,
-      },
     });
   } catch (error) {
     console.error(error);
