@@ -62,7 +62,6 @@ io.on("connection", (socket) => {
 });
 
 app.post("/api/webhook", (req, res) => {
-  console.info("Webhook recieved.", req.body);
   io.emit("assistant-message", req.body.data.content);
 });
 
