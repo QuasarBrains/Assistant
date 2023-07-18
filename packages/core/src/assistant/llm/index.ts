@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { GlobalChannelMessage } from "../../channels/construct";
 import { PlanOfAction } from "../agents/planofaction";
 
@@ -21,7 +22,11 @@ export abstract class ChatModel {
   ): Promise<PlanOfAction | undefined>;
 
   public abstract makeBooleanDecision(
-    messages: GlobalChannelMessage[],
     decisionDescription: string
   ): Promise<{ decision: boolean; reason: string } | undefined>;
+
+  public abstract makeSelectionDecision<T extends number | string>(
+    decisionDescription: string,
+    options: { label: string; value: T }[]
+  ): Promise<{ decision: T; reason: string } | undefined>;
 }

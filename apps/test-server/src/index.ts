@@ -65,6 +65,7 @@ io.on("connection", (socket) => {
 
 app.post("/api/webhook", (req, res) => {
   io.emit("assistant-message", req.body.data.content);
+  res.sendStatus(200);
 });
 
 server.listen(PORT, () => {

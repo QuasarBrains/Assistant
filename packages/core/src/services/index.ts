@@ -46,6 +46,7 @@ export class ServiceManager {
   public getServiceList(): Module[] {
     return Object.values(this.services).map((service) => {
       return {
+        type: "service",
         name: service.Name(),
         description: service.Description(),
         schema: service.Schema(),

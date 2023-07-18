@@ -1,6 +1,6 @@
 import Assistant from "../assistant";
 import { Module } from "../types/main";
-import { Channel, ChannelOptions } from "./construct";
+import { Channel } from "./construct";
 
 export interface ChannelManagerOptions {
   assistant: Assistant;
@@ -50,6 +50,7 @@ export class ChannelManager {
   public getChannelList = (): Module[] => {
     return Object.values(this.channels).map((channel) => {
       return {
+        type: "channel",
         name: channel.Name(),
         description: channel.Description(),
         schema: channel.Schema(),

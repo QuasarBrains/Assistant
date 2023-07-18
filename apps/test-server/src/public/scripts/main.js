@@ -2,6 +2,9 @@ const CHATFORM = document.getElementById("chat-form");
 const CHATHISTORY = document.getElementById("chat-history");
 const CHATLOADING = document.getElementById("chat-loading");
 const CHATINFO = document.getElementById("chat-info");
+const CHATMESSAGE = document.getElementById("message-input");
+
+CHATMESSAGE.focus();
 
 const getRandomID = () => {
   return Math.random().toString(36).substr(2, 9);

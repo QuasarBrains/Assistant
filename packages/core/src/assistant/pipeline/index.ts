@@ -34,7 +34,8 @@ export class Pipeline {
       }
       const planOfAction = await this.assistant
         ?.Model()
-        .generatePlanOfAction(messages);
+        .generateDummyPlanOfAction(messages);
+
       if (!planOfAction) {
         return false;
       }
@@ -53,6 +54,7 @@ export class Pipeline {
           planOfAction,
           primaryChannel,
           primaryConversationId: conversationId,
+          verbose: this.verbose,
         })
       );
       if (this.verbose) {
@@ -63,7 +65,7 @@ export class Pipeline {
           conversationId
         );
       }
-      newAgent.init();
+      await newAgent.initAndStart();
       return true;
     } catch (error) {
       console.error(error);

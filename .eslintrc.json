@@ -16,6 +16,7 @@
     "import/no-extraneous-dependencies": [0, "never"],
     "camelcase": [0, "never"],
     "radix": [0, "never"],
-    "no-console": ["warn", { "allow": ["warn", "error", "info"] }]
+    "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
+    "no-unused-vars": "warn"
   }
 }

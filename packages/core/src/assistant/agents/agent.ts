@@ -1,8 +1,8 @@
 import { AgentManager } from ".";
-import Assistant, { Channel } from "..";
-import { JSONSchema } from "../../types/jsonschema";
+import { Channel } from "..";
+import { Module } from "../../types/main";
 import { ChatModel } from "../llm";
-import { PlanOfAction } from "./planofaction";
+import { PlanOfAction, Step } from "./planofaction";
 import { randomBytes } from "crypto";
 
 export interface AssistantOptions {
@@ -11,6 +11,7 @@ export interface AssistantOptions {
   planOfAction: PlanOfAction;
   primaryChannel: Channel;
   primaryConversationId: string;
+  verbose?: boolean;
 }
 
 export class Agent {
@@ -20,6 +21,7 @@ export class Agent {
   private manager: AgentManager | undefined;
   private primaryChannel: Channel;
   private primaryConversationId: string;
+  private verbose: boolean;
 
   constructor({
     name,
@@ -27,12 +29,14 @@ export class Agent {
     planOfAction,
     primaryChannel,
     primaryConversationId,
+    verbose,
   }: AssistantOptions) {
     this.name = name;
     this.model = model;
     this.planOfAction = planOfAction;
     this.primaryChannel = primaryChannel;
     this.primaryConversationId = primaryConversationId;
+    this.verbose = verbose ?? false;
   }
 
   public static getRandomNewName() {
@@ -59,38 +63,158 @@ export class Agent {
     return this.planOfAction;
   }
 
-  public actionsAvailable(): JSONSchema[] {
+  public actionsAvailable(): Module[] {
     const services =
       this.manager?.Assistant()?.ServiceManager().getServiceList() ?? [];
     const channels =
-      this.manager?.Assistant()?.ChannelManager().getChannelList() ?? [];
+      this.manager
+        ?.Assistant()
+        ?.ChannelManager()
+        .getChannelList()
+        .map((c) => {
+          if (c.name === this.primaryChannel.Name()) {
+            return {
+              ...c,
+              name: `${c.name} (*PRIMARY CHANNEL)`,
+            };
+          }
+          return c;
+        }) ?? [];
 
     return [...services, ...channels];
   }
 
-  public publishBasicMessageToPrimaryChannel(message: string) {
-    this.primaryChannel.sendMessageAsAssistant(
-      {
-        content: message,
-      },
-      this.primaryConversationId
-    );
+  public async sendPrimaryChannelMessage(message: string) {
+    try {
+      await this.primaryChannel.sendMessageAsAssistant(
+        {
+          content: message,
+        },
+        this.primaryConversationId
+      );
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
   }
 
   public async sendGreetingMessage() {
-    // Send a message to the user on initialization
-    this.publishBasicMessageToPrimaryChannel(
-      `Hello! I'm ${this.FormattedAgentName()}!
-      
-      I have been initialized to complete the following task:
-      "${this.planOfAction.Title()}"
-      `
-    );
+    try {
+      // Send a message to the user on initialization
+      await this.sendPrimaryChannelMessage(
+        `Hello! I'm ${this.FormattedAgentName()}!
+        
+        I have been initialized to complete the following task:
+        "${this.planOfAction.Title()}"
+        `
+      );
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
   }
 
   public async init() {
-    this.sendGreetingMessage();
+    try {
+      this.sendGreetingMessage();
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
   }
 
-  public async run() {}
+  public async start() {
+    try {
+      if (this.verbose) {
+        await this.sendPrimaryChannelMessage("Starting agent loop...");
+      }
+      this.run();
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async initAndStart() {
+    try {
+      await this.init();
+      this.start();
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async run() {
+    try {
+      while (!this.planOfAction.isFinished()) {
+        const currentStep = this.planOfAction.getCurrentStep();
+        this.sendPrimaryChannelMessage(
+          `Current Step | ${this.planOfAction.DescribeCurrentStep(true)}`
+        );
+        const nextAction = await this.getNextActionFromStep(currentStep);
+        this.planOfAction.markCurrentStepCompleted();
+        this.planOfAction.markCompleted();
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async getNextActionFromStep(step: Step) {
+    try {
+      const moduleDecision = await this.model.makeSelectionDecision<string>(
+        `
+        The decision is what module to use, given a set of options and the current task to be completed.
+        Each module has a "type", a "name" and a "description" which will help you determine which one is the most relavent.
+
+        Keep in mind the different module types available to you: Channels and Services.
+        A "Channel" is used to communicate with the user, whereas a "Service" is used to perform some action.
+        Therefore, if communication is required, a Channel probably makes sense.
+        However, if you need to perform some action, a Service is probably the way to go.
+        Also, keep in mind that the (*PRIMARY CHANNEL) is the channel that the user is currently communicating with you on, so usually it should be used unless another channel makes more sense.
+
+        The most important thing is that the Channel or Service chosen is relavent and suitable to completing the task.
+        If no modules seem suitable to complete the task, you should choose "none".
+        `,
+        this.actionsAvailable().map((a) => {
+          return {
+            label: `[${a.type.toUpperCase()}] ${a.name} - ${a.description}`,
+            value: a.name,
+          };
+        })
+      );
+
+      if (!moduleDecision) {
+        return null;
+      }
+
+      const { decision, reason } = moduleDecision;
+
+      console.log("moduleDecision", decision, reason);
+
+      this.sendPrimaryChannelMessage(
+        `${decision} was chosen because "${reason}"`
+      );
+
+      if (decision === "none") {
+        return null;
+      }
+
+      return moduleDecision;
+    } catch (error) {
+      console.error(error);
+      this.sendPrimaryChannelMessage(
+        `An error occurred while trying to get the next action from step ${step.description}`
+      );
+      return null;
+    }
+  }
 }

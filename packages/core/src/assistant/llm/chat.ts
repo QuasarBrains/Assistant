@@ -259,8 +259,27 @@ export class OpenAIChatModel extends ChatModel {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
+  public async generateDummyPlanOfAction(messages: GlobalChannelMessage[]) {
+    try {
+      const planOfAction = new Assistant.PlanOfAction({
+        title: "Respond to the User's Greeting",
+        steps: [
+          {
+            description: "Send a greeting message to the user.",
+            required: true,
+          },
+        ],
+      });
+
+      return planOfAction;
+    } catch (error) {
+      console.error(error);
+      return undefined;
+    }
+  }
+
   public async makeBooleanDecision(
-    messages: GlobalChannelMessage[],
     decisionDescription: string
   ): Promise<{ decision: boolean; reason: string } | undefined> {
     try {
@@ -270,19 +289,14 @@ export class OpenAIChatModel extends ChatModel {
           {
             role: "system",
             content: `
-            You are a decision maker. Based on the following description of the decision, you will output a boolean value of true or false:
-            "${decisionDescription}"
+            You are a decision maker. Based on the given description of the decision to be made, you will output a boolean value of true or false.
             `,
           },
           {
             role: "user",
             content: `
-            Here is the conversation history, pay the most attention to the last message from the user:
-            ${messages
-              .map((message) => {
-                return `- ${message.role.toUpperCase()}: ${message.content}`;
-              })
-              .join("\n")}
+            Here is the description of the decision to be made:
+            ${decisionDescription}
             `,
           },
         ],
@@ -306,6 +320,9 @@ export class OpenAIChatModel extends ChatModel {
             },
           },
         ],
+        function_call: {
+          name: "give_boolean_decision",
+        },
       });
 
       if (!response) {
@@ -328,6 +345,98 @@ export class OpenAIChatModel extends ChatModel {
 
       return parsedArgs as {
         decision: boolean;
+        reason: string;
+      };
+    } catch (error) {
+      console.error(error);
+      return undefined;
+    }
+  }
+
+  public async makeSelectionDecision<T extends number | string>(
+    decisionDescription: string,
+    options: { label: string; value: T }[]
+  ): Promise<{ decision: T; reason: string } | undefined> {
+    try {
+      const response = await this.createChatCompletion({
+        model: this.PlanningModel(),
+        messages: [
+          {
+            role: "system",
+            content: `
+              You are a decision maker.
+              Based on the given description of the decision to be made, you will output the value corresponding to the selected option.
+              The value could be either a number or a string.
+            `,
+          },
+          {
+            role: "user",
+            content: `
+            Here is the description of the decision to be made:
+            ${decisionDescription}
+
+            Here are the options to choose from:
+            ${options
+              .map((option) => {
+                return `- ${option.value}: ${option.label}`;
+              })
+              .join("\n")}
+            `,
+          },
+        ],
+        functions: [
+          {
+            name: "give_selection_decision",
+            description:
+              "Returns a decision object based on a selection input.",
+            parameters: {
+              type: "object",
+              properties: {
+                decision: {
+                  anyOf: [
+                    {
+                      type: "number",
+                    },
+                    {
+                      type: "string",
+                    },
+                  ],
+                  description: "The value corresponding to the correct option.",
+                },
+                reason: {
+                  type: "string",
+                  description: "The reason for the decision.",
+                },
+              },
+              required: ["decision", "reason"],
+            },
+          },
+        ],
+        function_call: {
+          name: "give_selection_decision",
+        },
+      });
+
+      if (!response) {
+        return undefined;
+      }
+
+      const decisionFunctionCall = response.choices[0].message?.function_call;
+
+      if (!decisionFunctionCall) {
+        return undefined;
+      }
+
+      const { arguments: args } = decisionFunctionCall;
+
+      if (!args) {
+        return undefined;
+      }
+
+      const parsedArgs = JSON.parse(args);
+
+      return parsedArgs as {
+        decision: T;
         reason: string;
       };
     } catch (error) {

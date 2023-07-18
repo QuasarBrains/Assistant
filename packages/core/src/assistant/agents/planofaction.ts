@@ -70,8 +70,31 @@ export class PlanOfAction {
     return this.steps[this.currentStep];
   }
 
+  public DescribeCurrentStep(withTotalCount = false) {
+    const step = this.getCurrentStep();
+    return `Step ${this.currentStep + 1}${
+      withTotalCount ? `/${this.steps.length}` : ""
+    }: ${step.description} (${step.required ? "REQUIRED" : "OPTIONAL"})`;
+  }
+
+  public getCurrentStepIndex() {
+    return this.currentStep;
+  }
+
   public nextStep() {
     this.currentStep++;
+  }
+
+  public isCompleted() {
+    return this.completed;
+  }
+
+  public isFinished() {
+    return this.finished;
+  }
+
+  public markCurrentStepCompleted() {
+    this.steps[this.currentStep].completed = true;
   }
 
   public recordJSON(to: string) {
