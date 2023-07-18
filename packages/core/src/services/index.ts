@@ -1,5 +1,6 @@
 import { Service } from "./construct";
 import Assistant from "../assistant";
+import { Module } from "../types/main";
 
 export interface ServiceManagerOptions {
   assistant: Assistant;
@@ -40,5 +41,15 @@ export class ServiceManager {
     });
 
     return descriptions;
+  }
+
+  public getServiceList(): Module[] {
+    return Object.values(this.services).map((service) => {
+      return {
+        name: service.Name(),
+        description: service.Description(),
+        schema: service.Schema(),
+      };
+    });
   }
 }

@@ -25,6 +25,7 @@ const assistant = new Assistant({
     defaultModel: "gpt-4",
     secondaryModel: "gpt-3.5-turbo",
   }),
+  datastoreDirectory: path.join(__dirname, "datastore"),
 });
 
 assistant.ServiceManager().registerServices(services);

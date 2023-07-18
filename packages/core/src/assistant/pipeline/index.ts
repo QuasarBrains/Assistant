@@ -59,6 +59,7 @@ export class Pipeline {
             - STEP 5: Send the response to the user (REQUIRED)
 
             * Keep in mind that this formatting is not your expected output, and you should instead follow the function call format below.
+            * Keep the descriptions concise, but also descriptive enough to be understood by a human, the (REQUIRED) and (OPTIONAL) tags should not be part of the description.
 
             A REQUIRED step is one that must be completed in order for the plan of action to be considered complete, and subsequent steps will not be performed until it is complete.
             An OPTIONAL step is one that should be attempted to better respond to the user, but ultimately can be skipped.

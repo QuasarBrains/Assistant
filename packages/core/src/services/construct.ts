@@ -1,24 +1,17 @@
 import { ServiceManager } from ".";
 import { JSONSchema } from "../types/jsonschema";
-
-export interface ServiceSchema {
-  methods: {
-    name: string;
-    description: string;
-    parameters: JSONSchema;
-  }[];
-}
+import { Module } from "../types/main";
 
 export interface ServiceOptions {
   name: string;
   description: string;
-  schema: ServiceSchema;
+  schema: Module["schema"];
 }
 
 export abstract class Service {
   private name: string;
   private description: string;
-  private schema: ServiceSchema;
+  private schema: Module["schema"];
   private manager: ServiceManager | undefined;
 
   constructor({ name, description, schema }: ServiceOptions) {

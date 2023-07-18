@@ -18,9 +18,12 @@
   "license": "ISC",
   "devDependencies": {
     "@onyx-assistant/tsconfig": "workspace:*",
+    "@types/prettier": "^2.7.3",
     "typescript": "^5.1.3"
   },
   "dependencies": {
-    "openai-edge": "^1.2.0"
+    "@types/node": "^20.4.2",
+    "openai-edge": "^1.2.0",
+    "prettier": "^2.5.1"
   }
 }

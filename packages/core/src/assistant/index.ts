@@ -5,12 +5,15 @@ import { OpenAIChatModel } from "./llm/chat";
 import { Service } from "../services/construct";
 import { Pipeline } from "./pipeline";
 import { PlanOfAction } from "./agents/planofaction";
+import { mkdirSync } from "fs";
 
 export type AvailableModels = OpenAIChatModel;
 
 export interface AssistantOptions {
   name: string;
   model: AvailableModels;
+  datastoreDirectory: string;
+  log?: boolean;
 }
 
 export { Service, Channel };
@@ -21,6 +24,8 @@ export default class Assistant {
   private serviceManager: ServiceManager;
   private model: AvailableModels;
   private pipeline: Pipeline;
+  private datastoreDirectory: string;
+  private log: boolean;
   public static Channel = Channel;
   public static Service = Service;
   public static PlanOfAction = PlanOfAction;
@@ -28,12 +33,20 @@ export default class Assistant {
     OpenAI: OpenAIChatModel,
   };
 
-  constructor({ name, model }: AssistantOptions) {
+  constructor({ name, model, datastoreDirectory, log }: AssistantOptions) {
     this.name = name;
     this.model = model;
+    this.datastoreDirectory = datastoreDirectory;
+    this.log = log ?? true;
     this.channelManager = new ChannelManager({ assistant: this });
     this.serviceManager = new ServiceManager({ assistant: this });
     this.pipeline = new Pipeline({ assistant: this });
+    this.init();
+  }
+
+  public async init() {
+    await this.initDatastore();
+    return true;
   }
 
   public Name(): string {
@@ -54,6 +67,20 @@ export default class Assistant {
 
   public Pipeline() {
     return this.pipeline;
+  }
+
+  public DatastoreDirectory() {
+    return this.datastoreDirectory;
+  }
+
+  public initDatastore() {
+    if (this.log) {
+      console.info(`Initializing datastore at ${this.datastoreDirectory}`);
+    }
+
+    mkdirSync(this.datastoreDirectory, { recursive: true });
+
+    return this.datastoreDirectory;
   }
 
   public async getChatResponseSimple(message: string): Promise<string> {
