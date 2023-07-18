@@ -42,26 +42,32 @@ router.post("/message", async (req, res) => {
       });
     }
 
-    serverChannel.recieveMessage({
-      content: message,
-    });
+    serverChannel.recieveMessage(
+      {
+        content: message,
+        role: "user",
+      },
+      conversation_id
+    );
 
     const history = serverChannel.getConversationHistory(conversation_id);
 
-    serverChannel
-      .getAssistantResponseAndRecord({
-        messages: [
-          ...history,
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-        conversation_id,
-      })
-      .then((message) => {
-        serverChannel.sendMessage(message);
+    const started = await serverChannel.startAssistantResponse({
+      messages: [
+        ...history,
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+      conversation_id,
+    });
+
+    if (!started) {
+      return res.status(500).send({
+        message: "Internal server error.",
       });
+    }
 
     return res.send({
       message: "Message recieved.",

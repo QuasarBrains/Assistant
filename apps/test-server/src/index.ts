@@ -22,10 +22,11 @@ const assistant = new Assistant({
   name: "Onyx",
   model: new Assistant.ChatModels.OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    defaultModel: "gpt-4",
-    secondaryModel: "gpt-3.5-turbo",
+    agentModel: "gpt-4",
+    planningModel: "gpt-3.5-turbo",
   }),
   datastoreDirectory: path.join(__dirname, "datastore"),
+  verbose: true,
 });
 
 assistant.ServiceManager().registerServices(services);

@@ -1,4 +1,5 @@
 import { GlobalChannelMessage } from "../../channels/construct";
+import { PlanOfAction } from "../agents/planofaction";
 
 export abstract class ChatModel {
   public abstract getChatResponseSimple({
@@ -14,4 +15,13 @@ export abstract class ChatModel {
   }: {
     messages: GlobalChannelMessage[];
   }): Promise<GlobalChannelMessage>;
+
+  public abstract generatePlanOfAction(
+    messages: GlobalChannelMessage[]
+  ): Promise<PlanOfAction | undefined>;
+
+  public abstract makeBooleanDecision(
+    messages: GlobalChannelMessage[],
+    decisionDescription: string
+  ): Promise<{ decision: boolean; reason: string } | undefined>;
 }

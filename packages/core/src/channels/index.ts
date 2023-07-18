@@ -8,7 +8,7 @@ export interface ChannelManagerOptions {
 
 export class ChannelManager {
   private channels: {
-    [key: string]: Channel<any>;
+    [key: string]: Channel;
   } = {};
   private assistant: Assistant | undefined;
 
@@ -21,7 +21,7 @@ export class ChannelManager {
     return this.assistant;
   }
 
-  public registerChannel<M>(channel: Channel<M>): void {
+  public registerChannel(channel: Channel): void {
     if (this.channels[channel.Name()]) {
       throw new Error(`Channel with name ${channel.Name()} already exists.`);
     }
@@ -29,13 +29,13 @@ export class ChannelManager {
     this.channels[channel.Name()] = channel;
   }
 
-  public registerChannels<M>(channels: Channel<M>[]): void {
+  public registerChannels(channels: Channel[]): void {
     channels.forEach((channel) => {
       this.registerChannel(channel);
     });
   }
 
-  public getChannel<M>(channelName: string): Channel<M> {
+  public getChannel(channelName: string): Channel {
     return this.channels[channelName];
   }
 

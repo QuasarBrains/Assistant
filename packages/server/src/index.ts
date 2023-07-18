@@ -13,10 +13,6 @@ export interface ServerOptions {
   log?: boolean; // Indicates whether server logs should be enabled.
 }
 
-interface ServerChannelMessage {
-  content: string;
-}
-
 /**
  * Represents a server that handles HTTP requests.
  */
@@ -25,7 +21,7 @@ export default class Server {
   private port: number;
   private log = true;
   private assistant: Assistant;
-  private serverChannel: Channel<ServerChannelMessage>;
+  private serverChannel: Channel;
   private serverHistory: Record<string, GlobalChannelMessage[]> = {
     test: [
       {
@@ -107,7 +103,7 @@ export default class Server {
    * creates the server channel
    */
   public createServerChannel(): typeof this.serverChannel {
-    const serverChannel = new Assistant.Channel<ServerChannelMessage>({
+    const serverChannel = new Assistant.Channel({
       name: "server",
       description:
         "Allows interaction with the user via HTTP requests. Has an endpoint open that allows for messages to be sent, and assistant replies will be sent back as responses.",
@@ -120,15 +116,6 @@ export default class Server {
           },
         });
         return message;
-      },
-      parseMessageToString: async (message) => {
-        return message.content;
-      },
-      parseMessageToGlobalMessage: async (message, role) => {
-        return {
-          content: message.content,
-          role,
-        };
       },
       addToHistory: (history) => {
         this.serverHistory = {
