@@ -1,11 +1,18 @@
 import Assistant from "..";
 import { Channel, GlobalChannelMessage } from "../../channels/construct";
 
+export interface PipelineOptions {
+  assistant: Assistant;
+  verbose?: boolean;
+}
+
 export class Pipeline {
   private assistant: Assistant | undefined;
+  private verbose: boolean = false;
 
-  constructor({ assistant }: { assistant: Assistant }) {
+  constructor({ assistant, verbose }: PipelineOptions) {
     this.assistant = assistant;
+    this.verbose = verbose ?? false;
   }
 
   public Assistant() {
@@ -31,6 +38,14 @@ export class Pipeline {
       if (!planOfAction) {
         return false;
       }
+      if (this.verbose) {
+        primaryChannel.sendMessageAsAssistant(
+          {
+            content: "Creating new agent...",
+          },
+          conversationId
+        );
+      }
       const newAgent = this.assistant.AgentManager().registerAgent(
         new Assistant.Agent({
           name: Assistant.Agent.getRandomNewName(),
@@ -40,6 +55,14 @@ export class Pipeline {
           primaryConversationId: conversationId,
         })
       );
+      if (this.verbose) {
+        primaryChannel.sendMessageAsAssistant(
+          {
+            content: "Agent created, initializing...",
+          },
+          conversationId
+        );
+      }
       newAgent.init();
       return true;
     } catch (error) {

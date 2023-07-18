@@ -59,7 +59,7 @@ export default class Assistant {
     this.channelManager = new ChannelManager({ assistant: this });
     this.serviceManager = new ServiceManager({ assistant: this });
     this.agentManager = new AgentManager({ assistant: this });
-    this.pipeline = new Pipeline({ assistant: this });
+    this.pipeline = new Pipeline({ assistant: this, verbose: this.verbose });
     this.init();
   }
 

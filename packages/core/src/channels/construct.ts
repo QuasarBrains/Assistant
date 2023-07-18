@@ -146,6 +146,10 @@ export class Channel {
     message: GlobalChannelMessage,
     conversation_id: string
   ): Promise<void> {
+    this.defineConversationHistory({
+      conversation_id,
+      messages: [...this.getConversationHistory(conversation_id), message],
+    });
     this.messageListeners.forEach((cb) =>
       cb(message, (msg: GlobalChannelMessage) =>
         this.sendMessage(msg, conversation_id)
@@ -163,10 +167,6 @@ export class Channel {
     };
     this.sendMessage(newMessage, conversation_id);
     this.recieveMessage(newMessage, conversation_id);
-    this.defineConversationHistory({
-      conversation_id,
-      messages: [...this.getConversationHistory(conversation_id), newMessage],
-    });
   }
 
   public addMessageListener(
@@ -189,15 +189,17 @@ export class Channel {
    * Recieves the message, sends it to the assistant, and records and sends the response.
    */
   public async startAssistantResponse({
-    messages,
+    message,
     conversation_id,
   }: {
-    messages: GlobalChannelMessage[];
+    message: GlobalChannelMessage;
     conversation_id: string;
   }): Promise<boolean> {
     try {
+      this.recieveMessage(message, conversation_id);
+      const history = this.getConversationHistory(conversation_id);
       const response = await this.manager?.Assistant()?.startAssistantResponse({
-        messages,
+        messages: [...history, message],
         channel: this,
         conversation_id,
       });

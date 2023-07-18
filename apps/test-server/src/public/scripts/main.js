@@ -1,6 +1,7 @@
 const CHATFORM = document.getElementById("chat-form");
 const CHATHISTORY = document.getElementById("chat-history");
 const CHATLOADING = document.getElementById("chat-loading");
+const CHATINFO = document.getElementById("chat-info");
 
 const getRandomID = () => {
   return Math.random().toString(36).substr(2, 9);
@@ -10,6 +11,12 @@ window.conversation_id =
   sessionStorage.getItem("conversation_id") || getRandomID();
 
 sessionStorage.setItem("conversation_id", window.conversation_id);
+
+const renderChatInfo = () => {
+  CHATINFO.innerText = `Conversation ID: ${window.conversation_id}`;
+};
+
+renderChatInfo();
 
 const chatHistory = [];
 

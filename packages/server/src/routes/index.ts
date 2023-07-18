@@ -42,24 +42,11 @@ router.post("/message", async (req, res) => {
       });
     }
 
-    serverChannel.recieveMessage(
-      {
-        content: message,
-        role: "user",
-      },
-      conversation_id
-    );
-
-    const history = serverChannel.getConversationHistory(conversation_id);
-
     const started = await serverChannel.startAssistantResponse({
-      messages: [
-        ...history,
-        {
-          role: "user",
-          content: message,
-        },
-      ],
+      message: {
+        role: "user",
+        content: message,
+      },
       conversation_id,
     });
 

@@ -13,6 +13,14 @@
   margin: 0;
 }
 
+#chat-info {
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.75;
+  padding: 18px;
+  background-color: var(--switch-background-color);
+}
+
 #chat-history {
   box-sizing: border-box;
   padding: 0;
@@ -26,6 +34,7 @@
   padding: 0;
   padding: 24px;
   font-size: 16px;
+  border-top: 1px solid var(--contrast);
 }
 @media screen and (min-width: 768px) {
   #chat-history .chat-item {
