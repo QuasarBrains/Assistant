@@ -1,5 +1,4 @@
 import { ServiceManager } from ".";
-import { JSONSchema } from "../types/jsonschema";
 import { Module } from "../types/main";
 
 export interface ServiceOptions {

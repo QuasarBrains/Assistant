@@ -22,6 +22,9 @@
 }
 
 #chat-history {
+  height: 80vh;
+  overflow-y: scroll;
+  scrollbar-width: thin;
   box-sizing: border-box;
   padding: 0;
   list-style-type: none;

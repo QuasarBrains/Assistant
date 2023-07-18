@@ -27,6 +27,8 @@ class AxiosService extends Assistant.Service {
               },
               required: ["url"],
             },
+            performAction: (params: { url: string; params?: any }) =>
+              this.get(params),
           },
           {
             name: "post",
@@ -49,6 +51,8 @@ class AxiosService extends Assistant.Service {
               },
               required: ["url", "data"],
             },
+            performAction: (params: { url: string; data: any; params?: any }) =>
+              this.post(params),
           },
         ],
       },

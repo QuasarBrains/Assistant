@@ -53,4 +53,8 @@ export class ServiceManager {
       };
     });
   }
+
+  public getService(name: string): Service | undefined {
+    return this.services[name];
+  }
 }

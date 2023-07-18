@@ -100,6 +100,11 @@ export class Channel {
             },
             required: ["conversation_id"],
           },
+          performAction: (params: {
+            conversation_id: string;
+            count?: number;
+          }) =>
+            this.getConversationHistory(params.conversation_id, params.count),
         },
         {
           name: "get_full_history",
@@ -109,6 +114,7 @@ export class Channel {
             properties: {},
             required: [],
           },
+          performAction: () => this.getFullHistory(),
         },
         {
           name: "send_message",
@@ -129,6 +135,8 @@ export class Channel {
             },
             required: ["message"],
           },
+          performAction: (params: { message: GlobalChannelMessage }) =>
+            this.sendMessageAsAssistant(params.message, "default"),
         },
       ],
     };
@@ -136,7 +144,13 @@ export class Channel {
 
   public getActionsMap() {
     return {
-      get_conversation_history: this.getConversationHistory,
+      get_conversation_history: ({
+        conversation_id,
+        count,
+      }: {
+        conversation_id: string;
+        count?: number;
+      }) => this.getConversationHistory,
       get_full_history: this.getFullHistory,
       send_message: this.sendMessageAsAssistant,
     };

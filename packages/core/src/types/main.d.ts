@@ -9,6 +9,7 @@ export interface Module {
       name: string;
       description: string;
       parameters: JSONSchema;
+      performAction: (params: any) => any;
     }[];
   };
 }
