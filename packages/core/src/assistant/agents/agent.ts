@@ -180,7 +180,7 @@ export class Agent {
           );
         }
         this.planOfAction.markCurrentStepCompleted();
-        this.planOfAction.markCompleted();
+        this.planOfAction.nextStep();
       }
       return true;
     } catch (error) {
