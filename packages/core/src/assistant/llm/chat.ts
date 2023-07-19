@@ -21,11 +21,14 @@ export class OpenAIChatModel extends ChatModel {
   private agentModel: AllowedOpenAIChatModels;
   private planningModel: string;
   private api: OpenAIApi;
+  public static readonly DEFAULT_AGENT_MODEL = "gpt-4";
+  public static readonly DEFAULT_PLANNING_MODEL = "gpt-3.5-turbo";
 
   constructor({ apiKey, agentModel, planningModel }: OpenAIOptions) {
     super();
-    this.agentModel = agentModel || "gpt-4";
-    this.planningModel = planningModel || "gpt-3.5-turbo";
+    this.agentModel = agentModel || OpenAIChatModel.DEFAULT_AGENT_MODEL;
+    this.planningModel =
+      planningModel || OpenAIChatModel.DEFAULT_PLANNING_MODEL;
     this.configuration = new Configuration({
       apiKey,
     });
@@ -176,6 +179,9 @@ export class OpenAIChatModel extends ChatModel {
             
             Remember, the goal of the plan of action is to outline the steps that an agent will use to accomplish a certain task.
             Therefore, it shouldn't involve more steps than required to accomplish a specific task, and should be designed to terminate after said task is completed.
+
+            Other guidance:
+            - The program will be more than capable of parsing input, so don't worry about parsing the user's message as a step.
             `,
           },
           {
@@ -250,6 +256,7 @@ export class OpenAIChatModel extends ChatModel {
       const planOfAction = new Assistant.PlanOfAction({
         title: parsedArgs.title,
         steps: parsedArgs.steps,
+        sourceMessages: messages,
       });
 
       return planOfAction;
@@ -270,6 +277,7 @@ export class OpenAIChatModel extends ChatModel {
             required: true,
           },
         ],
+        sourceMessages: messages,
       });
 
       return planOfAction;

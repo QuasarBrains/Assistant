@@ -106,7 +106,7 @@ export default class Server {
     const serverChannel = new Assistant.Channel({
       name: "server",
       description:
-        "Allows interaction with the user via HTTP requests. Has an endpoint open that allows for messages to be sent, and assistant replies will be sent back as responses.",
+        "Sets up a server and uses a combination of webhooks and a REST API to facilitate communication between the user and the assistant.",
       init: () => {},
       sendMessage: (message) => {
         axios.post(this.webhook_url, {

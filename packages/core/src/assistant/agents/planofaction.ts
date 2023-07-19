@@ -1,5 +1,6 @@
 import { writeFileSync } from "fs";
 import { format } from "prettier";
+import { GlobalChannelMessage } from "../../channels/construct";
 
 export interface Step {
   description: string;
@@ -10,6 +11,7 @@ export interface Step {
 export interface PlanOfActionDefinition {
   title: string;
   steps: Step[];
+  sourceMessages: GlobalChannelMessage[];
 }
 
 export class PlanOfAction {
@@ -19,9 +21,11 @@ export class PlanOfAction {
   private completed: boolean;
   private finished: boolean;
   private finishReason: string | undefined;
+  private sourceMessages: GlobalChannelMessage[];
 
-  constructor({ title, steps }: PlanOfActionDefinition) {
+  constructor({ title, steps, sourceMessages }: PlanOfActionDefinition) {
     this.title = title;
+    this.sourceMessages = sourceMessages;
     this.steps = steps.map((step) => {
       return {
         ...step,
@@ -52,6 +56,10 @@ export class PlanOfAction {
       })
       .join("\n")}
     `;
+  }
+
+  public SourceMessages() {
+    return this.sourceMessages;
   }
 
   public markCompleted() {

@@ -34,7 +34,7 @@ export class Pipeline {
       }
       const planOfAction = await this.assistant
         ?.Model()
-        .generateDummyPlanOfAction(messages);
+        .generatePlanOfAction(messages);
 
       if (!planOfAction) {
         return false;

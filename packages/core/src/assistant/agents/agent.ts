@@ -1,6 +1,6 @@
 import { AgentManager } from ".";
-import { Channel, Service } from "..";
-import { Module } from "../../types/main";
+import { Channel } from "..";
+import { Module, ModuleMethod } from "../../types/main";
 import { ChatModel } from "../llm";
 import { PlanOfAction, Step } from "./planofaction";
 import { randomBytes } from "crypto";
@@ -97,7 +97,7 @@ export class Agent {
     try {
       await this.primaryChannel.sendMessageAsAssistant(
         {
-          content: message,
+          content: `${this.FormattedAgentName()}: ${message}`,
         },
         this.primaryConversationId
       );
@@ -110,7 +110,6 @@ export class Agent {
 
   public async sendGreetingMessage() {
     try {
-      // Send a message to the user on initialization
       await this.sendPrimaryChannelMessage(
         `Hello! I'm ${this.FormattedAgentName()}!
         
@@ -163,10 +162,23 @@ export class Agent {
     try {
       while (!this.planOfAction.isFinished()) {
         const currentStep = this.planOfAction.getCurrentStep();
-        this.sendPrimaryChannelMessage(
-          `Current Step | ${this.planOfAction.DescribeCurrentStep(true)}`
-        );
+        if (this.verbose) {
+          this.sendPrimaryChannelMessage(
+            `Current Step | ${this.planOfAction.DescribeCurrentStep(true)}`
+          );
+        }
         const nextAction = await this.getNextActionFromStep(currentStep);
+        if (!nextAction) {
+          this.planOfAction.markFinished("FAILED");
+          break;
+        }
+        const result = await this.performAction(nextAction);
+        console.info("Result", result);
+        if (this.verbose) {
+          this.sendPrimaryChannelMessage(
+            `Result of ${nextAction.name} action: ${JSON.stringify(result)}`
+          );
+        }
         this.planOfAction.markCurrentStepCompleted();
         this.planOfAction.markCompleted();
       }
@@ -186,8 +198,8 @@ export class Agent {
 
         Keep in mind the different module types available to you: Channels and Services.
         A "Channel" is used to communicate with the user, whereas a "Service" is used to perform some action.
-        Therefore, if communication is required, a Channel probably makes sense.
-        However, if you need to perform some action, a Service is probably the way to go.
+        Channels should always be used for direct communication with the user, and almost never other than that. 
+        Services can be used for anything else.
         Also, keep in mind that the (*PRIMARY CHANNEL) is the channel that the user is currently communicating with you on, so usually it should be used unless another channel makes more sense.
 
         The most important thing is that the Channel or Service chosen is relavent and suitable to completing the task.
@@ -198,6 +210,14 @@ export class Agent {
 
         The current task is: "${this.planOfAction.Title()}"
         The current step is: "${step.description}"
+
+        The source messages of this generated task are:
+        ${this.planOfAction
+          .SourceMessages()
+          .map((m) => {
+            return `- ${m.role}: ${m.content}`;
+          })
+          .join("\n")}
         `,
         this.modulesAvailable().map((a) => {
           return {
@@ -213,11 +233,11 @@ export class Agent {
 
       const { decision, reason } = moduleDecision;
 
-      console.log("moduleDecision", decision, reason);
-
-      this.sendPrimaryChannelMessage(
-        `${decision} was chosen because "${reason}"`
-      );
+      if (this.verbose) {
+        this.sendPrimaryChannelMessage(
+          `${decision} was chosen because "${reason}"`
+        );
+      }
 
       if (decision === "none") {
         return null;
@@ -226,8 +246,6 @@ export class Agent {
       const map = this.modulesMap();
 
       const module = map[decision];
-
-      console.log("Found module", module);
 
       const moduleAction = await this.model.makeSelectionDecision<string>(
         `
@@ -242,6 +260,14 @@ export class Agent {
 
         The current task is: "${this.planOfAction.Title()}"
         The current step is: "${step.description}"
+
+        The source messages of this generated task are:
+        ${this.planOfAction
+          .SourceMessages()
+          .map((m) => {
+            return `- ${m.role}: ${m.content}`;
+          })
+          .join("\n")}
         `,
         module.schema.methods.map((a) => {
           return {
@@ -257,11 +283,11 @@ export class Agent {
 
       const { decision: actionDecision, reason: actionReason } = moduleAction;
 
-      console.log("moduleAction", actionDecision, actionReason);
-
-      this.sendPrimaryChannelMessage(
-        `${actionDecision} was chosen because "${actionReason}"`
-      );
+      if (this.verbose) {
+        this.sendPrimaryChannelMessage(
+          `${actionDecision} was chosen because "${actionReason}"`
+        );
+      }
 
       if (actionDecision === "none") {
         return null;
@@ -277,15 +303,89 @@ export class Agent {
         );
       }
 
-      console.log("Actionable method", actionableMethod);
-
-      return moduleDecision;
+      return actionableMethod;
     } catch (error) {
       console.error(error);
       this.sendPrimaryChannelMessage(
         `An error occurred while trying to get the next action from step ${step.description}`
       );
       return null;
+    }
+  }
+
+  public async performAction(action: ModuleMethod) {
+    try {
+      const planningModel = this.manager?.Assistant()?.Model().PlanningModel();
+
+      if (!planningModel) {
+        throw new Error("No assistant found");
+      }
+
+      const response = await this.manager
+        ?.Assistant()
+        ?.Model()
+        .createChatCompletion({
+          model: planningModel,
+          messages: [
+            {
+              role: "system",
+              content: `
+            You are an action caller.
+            Based on the context provided to you, and a task description, you will provide arguments to a given function.
+
+            Keep in mind that the task is the overarching goal, whereas the step is the current sub-task that needs to be completed.
+            You should pay the most attention to the current step, as the function to call has been chosen to complete it.
+            `,
+            },
+            {
+              role: "user",
+              content: `
+            The current task to perform is:
+            ${this.planOfAction.Title()}
+
+            The current step to perform is:
+            ${this.planOfAction.DescribeCurrentStep(true)}
+
+            The source messages of this task are:
+            ${this.planOfAction
+              .SourceMessages()
+              .map((m) => {
+                return `- ${m.role}: ${m.content}`;
+              })
+              .join("\n")}
+            `,
+            },
+          ],
+          functions: [
+            {
+              name: action.name,
+              description: action.description,
+              parameters: action.parameters,
+            },
+          ],
+          function_call: {
+            name: action.name,
+          },
+        });
+
+      if (!response) {
+        throw new Error("No response received from model");
+      }
+
+      const args = response.choices[0].message?.function_call?.arguments;
+
+      if (!args) {
+        throw new Error("No arguments received from model");
+      }
+
+      const parsedArgs = JSON.parse(args);
+
+      const result = await action.performAction(parsedArgs);
+
+      return result;
+    } catch (error) {
+      console.error(error);
+      return undefined;
     }
   }
 }

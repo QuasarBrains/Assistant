@@ -7,7 +7,7 @@ class AxiosService extends Assistant.Service {
   constructor() {
     super({
       name: "axios-service",
-      description: "make http requests with axios.",
+      description: "Use the Axios library to make HTTP request.",
       schema: {
         methods: [
           {

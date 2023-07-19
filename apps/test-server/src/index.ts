@@ -26,7 +26,7 @@ const assistant = new Assistant({
     planningModel: "gpt-3.5-turbo",
   }),
   datastoreDirectory: path.join(__dirname, "datastore"),
-  verbose: true,
+  verbose: false,
 });
 
 assistant.ServiceManager().registerServices(services);
