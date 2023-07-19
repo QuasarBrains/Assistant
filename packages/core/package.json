@@ -13,8 +13,11 @@
     "dev": "tsc -w",
     "lint": "eslint ."
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "assistant",
+    "gpt",
+    "framework"
+  ],
   "license": "ISC",
   "devDependencies": {
     "@onyxai/tsconfig": "workspace:*",
