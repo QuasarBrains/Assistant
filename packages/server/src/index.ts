@@ -1,5 +1,8 @@
 import Express, { Router } from "express";
-import Assistant, { Channel, GlobalChannelMessage } from "@onyxai/assistant";
+import Assistant, {
+  Channel,
+  GlobalChannelMessage,
+} from "@quasarbrains/assistant";
 import routes from "./routes";
 import axios from "axios";
 

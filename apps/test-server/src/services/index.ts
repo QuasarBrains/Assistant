@@ -1,4 +1,4 @@
-import Assistant from "@onyxai/assistant";
+import Assistant from "@quasarbrains/assistant";
 import Axios from "axios";
 
 class AxiosService extends Assistant.Service {

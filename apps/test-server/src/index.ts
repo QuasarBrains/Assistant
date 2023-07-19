@@ -1,6 +1,6 @@
 import { config } from "dotenv";
-import AssistantServer from "@onyxai/assistant-server";
-import Assistant from "@onyxai/assistant";
+import AssistantServer from "@quasarbrains/assistant-server";
+import Assistant from "@quasarbrains/assistant";
 import Express from "express";
 import services from "./services";
 import path from "path";

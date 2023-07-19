@@ -4,6 +4,6 @@
     "rootDir": "./src"
   },
   "exclude": ["node_modules"],
-  "extends": "@onyxai/tsconfig/base.json",
+  "extends": "@quasarbrains/tsconfig/base.json",
   "include": ["src"]
 }

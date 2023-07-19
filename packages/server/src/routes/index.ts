@@ -1,4 +1,4 @@
-import Assistant from "@onyxai/assistant";
+import Assistant from "@quasarbrains/assistant";
 import { Request, Router } from "express";
 import Server from "..";
 
