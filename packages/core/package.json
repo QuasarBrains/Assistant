@@ -6,7 +6,10 @@
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AidanTilgner/Onyx-Assistant"
+    "url": "git+https://github.com/AidanTilgner/Onyx-Assistant.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc",
@@ -28,5 +31,10 @@
     "@types/node": "^20.4.2",
     "openai-edge": "^1.2.0",
     "prettier": "^2.5.1"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/AidanTilgner/Onyx-Assistant/issues"
+  },
+  "homepage": "https://github.com/AidanTilgner/Onyx-Assistant#readme",
+  "author": ""
 }
