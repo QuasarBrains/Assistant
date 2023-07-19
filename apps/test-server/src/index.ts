@@ -1,6 +1,6 @@
 import { config } from "dotenv";
-import AssistantServer from "@onyx-assistant/server";
-import Assistant from "@onyx-assistant/core";
+import AssistantServer from "@onyxai/assistant-server";
+import Assistant from "@onyxai/assistant";
 import Express from "express";
 import services from "./services";
 import path from "path";

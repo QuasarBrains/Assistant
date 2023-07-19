@@ -26,10 +26,10 @@ importers:
 
   apps/test-server:
     dependencies:
-      '@onyx-assistant/core':
+      '@onyxai/assistant':
         specifier: workspace:*
         version: link:../../packages/core
-      '@onyx-assistant/server':
+      '@onyxai/assistant-server':
         specifier: workspace:*
         version: link:../../packages/server
       axios:
@@ -45,7 +45,7 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1
     devDependencies:
-      '@onyx-assistant/tsconfig':
+      '@onyxai/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
       '@types/express':
@@ -70,7 +70,7 @@ importers:
         specifier: ^2.5.1
         version: 2.8.8
     devDependencies:
-      '@onyx-assistant/tsconfig':
+      '@onyxai/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/prettier':
@@ -82,7 +82,7 @@ importers:
 
   packages/server:
     dependencies:
-      '@onyx-assistant/core':
+      '@onyxai/assistant':
         specifier: workspace:*
         version: link:../core
       '@types/express':
@@ -95,7 +95,7 @@ importers:
         specifier: ^4.18.2
         version: 4.18.2
     devDependencies:
-      '@onyx-assistant/tsconfig':
+      '@onyxai/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       typescript:

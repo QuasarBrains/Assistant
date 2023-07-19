@@ -1,5 +1,5 @@
 import Express, { Router } from "express";
-import Assistant, { Channel, GlobalChannelMessage } from "@onyx-assistant/core";
+import Assistant, { Channel, GlobalChannelMessage } from "@onyxai/assistant";
 import routes from "./routes";
 import axios from "axios";
 

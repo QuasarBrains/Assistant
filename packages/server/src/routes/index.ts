@@ -1,4 +1,4 @@
-import Assistant from "@onyx-assistant/core";
+import Assistant from "@onyxai/assistant";
 import { Request, Router } from "express";
 import Server from "..";
 

@@ -1,4 +1,4 @@
-import Assistant from "@onyx-assistant/core";
+import Assistant from "@onyxai/assistant";
 import Axios from "axios";
 
 class AxiosService extends Assistant.Service {
