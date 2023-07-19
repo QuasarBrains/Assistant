@@ -47,4 +47,29 @@ export class AgentManager {
 
     return descriptions;
   }
+
+  public pauseAgent(agentName: string) {
+    this.agents[agentName].pause();
+  }
+
+  public resumeAgent(agentName: string) {
+    this.agents[agentName].resume();
+  }
+
+  public pauseAllAgents() {
+    Object.values(this.agents).forEach((agent) => {
+      agent.pause();
+    });
+  }
+
+  public async killAgent(agentName: string) {
+    try {
+      await this.agents[agentName].kill();
+      delete this.agents[agentName];
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
 }

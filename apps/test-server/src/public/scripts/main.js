@@ -32,6 +32,7 @@ const renderChatHistory = () => {
     chatItem.innerText = chat.content;
     CHATHISTORY.appendChild(chatItem);
   });
+  CHATHISTORY.scrollTop = CHATHISTORY.scrollHeight;
 };
 
 renderChatHistory();

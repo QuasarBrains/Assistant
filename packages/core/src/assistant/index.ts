@@ -102,6 +102,8 @@ export default class Assistant {
     }
 
     mkdirSync(this.datastoreDirectory, { recursive: true });
+    mkdirSync(`${this.datastoreDirectory}/agents`, { recursive: true });
+    mkdirSync(`${this.datastoreDirectory}/agents/records`, { recursive: true });
 
     return this.datastoreDirectory;
   }

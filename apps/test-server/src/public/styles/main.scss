@@ -26,7 +26,7 @@ body {
 }
 
 #chat-history {
-  height: 80vh;
+  max-height: 80vh;
   overflow-y: scroll;
   scrollbar-width: thin;
   box-sizing: border-box;

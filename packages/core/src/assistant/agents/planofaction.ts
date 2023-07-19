@@ -5,7 +5,12 @@ import { GlobalChannelMessage } from "../../channels/construct";
 export interface Step {
   description: string;
   required: boolean;
+  retries: number;
+  actionOutput?: any;
+  context?: string;
   completed?: boolean;
+  finished?: boolean;
+  finishReason?: string;
 }
 
 export interface PlanOfActionDefinition {
@@ -30,6 +35,7 @@ export class PlanOfAction {
       return {
         ...step,
         completed: step.completed ?? false,
+        retries: step.retries ?? 0,
       };
     });
     this.currentStep = 0;
@@ -101,8 +107,34 @@ export class PlanOfAction {
     return this.finished;
   }
 
+  /**
+   * Mark the current step as completed.
+   * The next step will be executed.
+   */
   public markCurrentStepCompleted() {
     this.steps[this.currentStep].completed = true;
+    this.steps[this.currentStep].finished = true;
+    this.steps[this.currentStep].finishReason = "COMPLETED";
+    if (this.currentStep < this.steps.length - 1) {
+      this.nextStep();
+    } else {
+      this.markCompleted();
+    }
+  }
+
+  /**
+   * Mark the current step as finished, but not completed.
+   * The next step will be executed.
+   */
+  public markCurrentStepFinished(reason: "ABORTED" | "FAILED") {
+    this.steps[this.currentStep].completed = false;
+    this.steps[this.currentStep].finished = true;
+    this.steps[this.currentStep].finishReason = reason;
+    if (this.currentStep < this.steps.length - 1) {
+      this.nextStep();
+    } else {
+      this.markFinished(reason);
+    }
   }
 
   public recordJSON(to: string) {
@@ -125,25 +157,29 @@ export class PlanOfAction {
 
   public recordMarkdown(to: string) {
     const md = `
-    # ${this.title}
+# ${this.title}
 
-    **Completed**: ${this.completed ? "YES" : "NO"}
-    **Finished**: ${this.finished ? "YES" : "NO"}
-    **Finish Reason**: ${this.finishReason ?? "N/A"}
-    
-    ## Steps
-    ${this.steps
-      .map((step, index) => {
-        return `### Step ${index + 1}: ${step.description} (${
-          step.required ? "REQUIRED" : "OPTIONAL"
-        })
-        ${step.completed ? "[x]" : "[ ]"}
-        `;
-      })
-      .join("\n")}
+**Completed**: ${this.completed ? "YES" : "NO"}
+**Finished**: ${this.finished ? "YES" : "NO"}
+**Finish Reason**: ${this.finishReason ?? "N/A"}
+
+## Steps
+${this.steps
+  .map((step, index) => {
+    return `- ${step.completed ? "[x]" : "[ ]"} Step ${index + 1}: ${
+      step.description
+    } (${step.required ? "REQUIRED" : "OPTIONAL"})
+    `;
+  })
+  .join("\n")}
     `;
 
-    return writeFileSync(to, md);
+    return writeFileSync(
+      to,
+      format(md, {
+        parser: "markdown",
+      })
+    );
   }
 
   public recordDescription(to: string) {

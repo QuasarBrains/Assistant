@@ -5,7 +5,6 @@
     "import/no-unresolved": [0, { "caseSensitiveStrict": true }],
     "import/extensions": [0, "never"],
     "quotes": ["error", "double"],
-    "operator-linebreak": ["error", "after"],
     "no-use-before-define": [0, "never"],
     "no-underscore-dangle": [0, "never"],
     "prefer-regex-literals": [0, "never"],

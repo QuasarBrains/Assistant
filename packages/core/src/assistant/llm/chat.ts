@@ -275,6 +275,7 @@ export class OpenAIChatModel extends ChatModel {
           {
             description: "Send a greeting message to the user.",
             required: true,
+            retries: 0,
           },
         ],
         sourceMessages: messages,

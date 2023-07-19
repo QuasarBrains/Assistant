@@ -179,8 +179,8 @@ export class Channel {
       ...message,
       role: "assistant" as const,
     };
-    this.sendMessage(newMessage, conversation_id);
     this.recieveMessage(newMessage, conversation_id);
+    return this.sendMessage(newMessage, conversation_id);
   }
 
   public addMessageListener(
