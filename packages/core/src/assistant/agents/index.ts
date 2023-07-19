@@ -64,7 +64,7 @@ export class AgentManager {
 
   public async killAgent(agentName: string) {
     try {
-      await this.agents[agentName].kill();
+      await this.agents[agentName].kill("ABORTED");
       delete this.agents[agentName];
       return true;
     } catch (error) {
