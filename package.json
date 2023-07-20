@@ -15,7 +15,7 @@
     "turbo": "latest"
   },
   "packageManager": "pnpm@7.15.0",
-  "name": "onyx-assistant",
+  "name": "quasarbrains-assistant",
   "eslintConfig": {
     "extends": [
       "turbo"
