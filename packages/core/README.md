@@ -22,11 +22,18 @@ An assistant does not have a goal, it has a purpose. It does not have a discrete
 
 ## Example Usage
 
-> **Note**
+---
+
+> **Note**:
 > Code seen here is subject to change as the project progresses towards 1.0.0, some things here may not work as expected. If you have questions please [reach out](mailto:aidantilgner02@gmail.com) to me directly or [leave an issue](https://github.com/QuasarBrains/Assistant/issues/new)!
 
+---
+
 Install
-`npm install @quasarbrains/assistant`
+
+```bash
+npm install @quasarbrains/assistant
+```
 
 Usage
 
@@ -38,7 +45,7 @@ import { config } from "dotenv";
 const assistant = new Assistant({
   name: "Onyx",
   model: new Assistant.ChatModels.OpenAI({
-    apiKey: OPENAI_API_KEY,
+    apiKey: OPENAI_API_KEY, // ! YOUR OPENAI API KEY
     agentModel: "gpt-4",
     planningModel: "gpt-3.5-turbo",
   }),
