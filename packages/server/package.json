@@ -1,7 +1,7 @@
 {
   "name": "@quasarbrains/assistant-server",
   "version": "0.1.0",
-  "description": "",
+  "description": "A simple express router/app with a server channel for @quasarbrains/assistant",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": {
