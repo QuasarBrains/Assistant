@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AidanTilgner/Onyx-Assistant.git"
+    "url": "git+https://github.com/QuasarBrains/Assistant.git"
   },
   "publishConfig": {
     "access": "public"
@@ -33,8 +33,8 @@
     "prettier": "^2.5.1"
   },
   "bugs": {
-    "url": "https://github.com/AidanTilgner/Onyx-Assistant/issues"
+    "url": "https://github.com/QuasarBrains/Assistant/issues"
   },
-  "homepage": "https://github.com/AidanTilgner/Onyx-Assistant#readme",
+  "homepage": "https://github.com/QuasarBrains/Assistant#readme",
   "author": ""
 }

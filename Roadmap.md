@@ -12,7 +12,7 @@ On top of the core functionality, the idea of having a framework centered around
 
 The goal of `@quasarbrains/assistant` is to be a framework for building out complex digital assistants, using language models. More specifically, the package will provide an `Assistant` class, which will provide all of the functionality to build out your assistant in a declarative fashion. My goal here is to have a simple, declarative syntax, which allows predictable flows, functionality, and extension. `@quasarbrains/assistant` will provide the core functionality of the assistant, and everything required to be extensible, but the core library will not be extended past that.
 
-There are some core modules of the core that will be used for building out an assistant. Mainly, [`Services`](https://github.com/AidanTilgner/Onyx-Assistant/blob/master/documentation/Services.md), [`Events`](https://github.com/AidanTilgner/Onyx-Assistant/blob/master/documentation/Events.md), and [`Channels`](https://github.com/AidanTilgner/Onyx-Assistant/blob/master/documentation/Channels.md). Definitely go check out the docs for each of those for more information on them, but here we'll talk about what the consumer of the framework will see, and how they should be able to interact with them, at least for the core library and initial release.
+There are some core modules of the core that will be used for building out an assistant. Mainly, [`Services`](https://github.com/QuasarBrains/Assistant/blob/master/documentation/Services.md), [`Events`](https://github.com/QuasarBrains/Assistant/blob/master/documentation/Events.md), and [`Channels`](https://github.com/QuasarBrains/Assistant/blob/master/documentation/Channels.md). Definitely go check out the docs for each of those for more information on them, but here we'll talk about what the consumer of the framework will see, and how they should be able to interact with them, at least for the core library and initial release.
 
 #### Services
 
@@ -38,7 +38,7 @@ A plan of action is essentially a file which details a set of actions to perform
 
 > "please send an email to John Doe, explaining that I won't be able to make it to the meeting on Thursday"
 
-This is obviously a fairly complex task with an ambiguous program. We've seen agents grow in popularity in the past 6 months as a system configuration for completing complex tasks by allowing LLMs to formulate a plan, and pursue actions because of that. This is the aspect of the digital assistant that will draw the most from the agents. If you're interested more in agents vs assistants, check [this](https://github.com/AidanTilgner/Onyx-Assistant#agents-vs-assistants) out. Anyway, in order to solve this task, here is what the course of action might look like written out:
+This is obviously a fairly complex task with an ambiguous program. We've seen agents grow in popularity in the past 6 months as a system configuration for completing complex tasks by allowing LLMs to formulate a plan, and pursue actions because of that. This is the aspect of the digital assistant that will draw the most from the agents. If you're interested more in agents vs assistants, check [this](https://github.com/QuasarBrains/Assistant#agents-vs-assistants) out. Anyway, in order to solve this task, here is what the course of action might look like written out:
 
 > Send an email to John Doe explaining User's Absence from a Meeting:
 > Steps to Complete:

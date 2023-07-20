@@ -6,11 +6,11 @@ An infinitely extendable assistant framework to automate your life.
 
 **Onyx Assistant is currently pre-release!** There is some core functionality, but there's still a long way to go until it's ready to be used. No garuntee of backward's compatibility can be given at this time, as the kinks are worked out and the framework is stress tested. If you're interested in helping out, or testing it pre-release, [send me an email](mailto:aidantilgner02@gmail.com), or hmu some other way for more details.
 
-Check out [the roadmap](https://github.com/AidanTilgner/Onyx-Assistant/blob/master/Roadmap.md) for more info.
+Check out [the roadmap](https://github.com/QuasarBrains/Assistant/blob/master/Roadmap.md) for more info.
 
 ## Description
 
-Onyx Assistant is a declarative framework for building out complex, powerful digital assistants. Acting as a wrapper around a language model of choice, most noteably `gpt-4`, or `gpt-3.5-turbo`, the Onyx Assistant framework provides additional functionality and utilities to extend the model. Most noteably, the model will have access to [`Services`](https://github.com/AidanTilgner/Onyx-Assistant/blob/master/documentation/Services.md), [`Events`](https://github.com/AidanTilgner/Onyx-Assistant/blob/master/documentation/Events.md), and [`Channels`](https://github.com/AidanTilgner/Onyx-Assistant/blob/master/documentation/Channels.md). Through a combination of these core utilities, your assistant will be able to communicate with you (channels), pay attentiont to the world (events), and take action in any way possible through software (services).
+Onyx Assistant is a declarative framework for building out complex, powerful digital assistants. Acting as a wrapper around a language model of choice, most noteably `gpt-4`, or `gpt-3.5-turbo`, the Onyx Assistant framework provides additional functionality and utilities to extend the model. Most noteably, the model will have access to [`Services`](https://github.com/QuasarBrains/Assistant/blob/master/documentation/Services.md), [`Events`](https://github.com/QuasarBrains/Assistant/blob/master/documentation/Events.md), and [`Channels`](https://github.com/QuasarBrains/Assistant/blob/master/documentation/Channels.md). Through a combination of these core utilities, your assistant will be able to communicate with you (channels), pay attentiont to the world (events), and take action in any way possible through software (services).
 
 There will be prebuilt services, channels, and events, as well as other helpful functionality to get off the ground easily. However, the infinitely extendable aspect of Onyx Assistant is the ability to easily add your own functionality. You can add Channels to let your assistant communicate with you in new ways. Services will let you connect your assistant to any API, shell script, or other application you're willing to build an implementation for. And Events will let you define things that may happen which your assistant should pay attention to, as well as how to react.
 
@@ -23,4 +23,4 @@ An assistant does not have a goal, it has a purpose. It does not have a discrete
 ## Example Use
 
 > **Note**
-> Code seen here is subject to change as the project progresses towards 1.0.0, some things here may not work as expected. If you have questions please [reach out](mailto:aidantilgner02@gmail.com) to me directly or [leave an issue](https://github.com/AidanTilgner/Onyx-Assistant/issues/new)!
+> Code seen here is subject to change as the project progresses towards 1.0.0, some things here may not work as expected. If you have questions please [reach out](mailto:aidantilgner02@gmail.com) to me directly or [leave an issue](https://github.com/QuasarBrains/Assistant/issues/new)!
