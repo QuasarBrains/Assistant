@@ -42,6 +42,12 @@ export class Pipeline {
       if (this.verbose) {
         primaryChannel.sendMessageAsAssistant(
           {
+            content: "Plan of action generated, creating agent...",
+          },
+          conversationId
+        );
+        primaryChannel.sendMessageAsAssistant(
+          {
             content: "Creating new agent...",
           },
           conversationId

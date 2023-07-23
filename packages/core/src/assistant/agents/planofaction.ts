@@ -1,6 +1,7 @@
 import { writeFileSync } from "fs";
 import { format } from "prettier";
 import { GlobalChannelMessage } from "../../channels/construct";
+import Assistant from "..";
 
 export interface Step {
   description: string;
@@ -17,6 +18,7 @@ export interface PlanOfActionDefinition {
   title: string;
   steps: Step[];
   sourceMessages: GlobalChannelMessage[];
+  assistant: Assistant | undefined;
 }
 
 export class PlanOfAction {
@@ -27,10 +29,17 @@ export class PlanOfAction {
   private finished: boolean;
   private finishReason: string | undefined;
   private sourceMessages: GlobalChannelMessage[];
+  private assistant: Assistant | undefined;
 
-  constructor({ title, steps, sourceMessages }: PlanOfActionDefinition) {
+  constructor({
+    title,
+    steps,
+    sourceMessages,
+    assistant,
+  }: PlanOfActionDefinition) {
     this.title = title;
     this.sourceMessages = sourceMessages;
+    this.assistant = assistant;
     this.steps = steps.map((step) => {
       return {
         ...step,

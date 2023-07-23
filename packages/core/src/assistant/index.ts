@@ -5,7 +5,7 @@ import { OpenAIChatModel } from "./llm/chat";
 import { Service } from "../services/construct";
 import { Pipeline } from "./pipeline";
 import { PlanOfAction } from "./agents/planofaction";
-import { mkdirSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
 import { Agent } from "./agents/agent";
 import { AgentManager } from "./agents";
 
@@ -65,6 +65,7 @@ export default class Assistant {
 
   public async init() {
     await this.initDatastore();
+    await this.initChatModel();
     return true;
   }
 
@@ -104,8 +105,20 @@ export default class Assistant {
     mkdirSync(this.datastoreDirectory, { recursive: true });
     mkdirSync(`${this.datastoreDirectory}/agents`, { recursive: true });
     mkdirSync(`${this.datastoreDirectory}/agents/records`, { recursive: true });
+    mkdirSync(`${this.datastoreDirectory}/plansofaction`, { recursive: true });
 
     return this.datastoreDirectory;
+  }
+
+  public async initChatModel() {
+    this.model.registerAssistant(this);
+  }
+
+  public recordToDatastore(
+    path: string,
+    record: string | NodeJS.ArrayBufferView
+  ) {
+    return writeFileSync(`${this.datastoreDirectory}/${path}`, record);
   }
 
   public async getChatResponseSimple(message: string): Promise<string> {

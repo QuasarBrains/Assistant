@@ -1,8 +1,19 @@
 /* eslint-disable no-unused-vars */
+import Assistant from "..";
 import { GlobalChannelMessage } from "../../channels/construct";
 import { PlanOfAction } from "../agents/planofaction";
 
 export abstract class ChatModel {
+  private assistant: Assistant | undefined;
+
+  public Assistant() {
+    return this.assistant;
+  }
+
+  public registerAssistant(assistant: Assistant) {
+    this.assistant = assistant;
+  }
+
   public abstract getChatResponseSimple({
     message,
     system_prompt,
