@@ -6,6 +6,8 @@ import { ChatModel } from "../llm";
 import { PlanOfAction, Step } from "./planofaction";
 import { randomBytes } from "crypto";
 import { parseDateYYYYMMDD, parseTimeHHMM } from "../../utils/dates";
+import { writeFileSync } from "fs";
+import { format } from "prettier";
 
 export interface AssistantOptions {
   name: string;
@@ -30,6 +32,7 @@ export class Agent {
   private maxSectionLength: number;
   private maxStepRetries: number;
   private agentContext: { [key: string]: string } = {};
+  private agentOutputHistory: string[] = [];
 
   constructor({
     name,
@@ -63,6 +66,10 @@ export class Agent {
     return this.name;
   }
 
+  public OutputHistory(): string[] {
+    return this.agentOutputHistory;
+  }
+
   public FormattedAgentName(): string {
     return `Agent ${this.Name()}`;
   }
@@ -84,17 +91,22 @@ export class Agent {
     const today = parseDateYYYYMMDD(new Date());
     const now = parseTimeHHMM(new Date());
     const outputLocation = this.manager?.Assistant()?.DatastoreDirectory();
-    if (outputLocation) {
-      const outputFile = path.join(
-        outputLocation ?? "",
-        "agents",
-        "records",
-        `${this.Name()}-${today}-${now}-${this.planOfAction
-          .Title()
-          .toUpperCase()}.md`
+    if (!outputLocation) {
+      throw new Error(
+        "No output location found, please provide a datastoreDirectory to the assistant instance"
       );
-      this.planOfAction.recordMarkdown(outputFile);
     }
+    const outputFile = path.join(
+      outputLocation ?? "",
+      "agents",
+      "records",
+      `${this.Name()}-${today}-${now}-${this.planOfAction
+        .Title()
+        .toUpperCase()}.md`
+    );
+    const poaMarkdown = this.planOfAction.getMarkdown();
+    const output = `${poaMarkdown}\n\n${this.agentOutputHistory.join("\n")}`;
+    writeFileSync(outputFile, format(output, { parser: "markdown" }));
   }
 
   public async kill(reason: "ABORTED" | "FAILED" | "COMPLETED") {
@@ -169,8 +181,19 @@ export class Agent {
     return map;
   }
 
+  public async logToAgentOutput(message: string) {
+    try {
+      this.agentOutputHistory.push(format(message, { parser: "mdx" }));
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
   public async sendPrimaryChannelMessage(message: string) {
     try {
+      this.logToAgentOutput(message);
       await this.primaryChannel.sendMessageAsAssistant(
         {
           content: `${this.FormattedAgentName()}: ${message}`,
@@ -731,7 +754,7 @@ export class Agent {
         );
       }
 
-      if (function_call?.name === "none") {
+      if (!function_call || function_call?.name === "none") {
         return {
           function_to_perform: "none",
           withArgs: undefined,
@@ -764,101 +787,64 @@ export class Agent {
       }
 
       const actions = this.getFinishActions();
-      // ! THIS SHOULD JUST BE A DECISION SELECTION SINCE IT DOESN'T NEED TO PROVIDE ARGS
-      const actionDecision = await this.manager
-        ?.Assistant()
-        ?.Model()
-        .createChatCompletion({
-          model: planningModel,
-          messages: [
-            {
-              role: "system",
-              content: `
-              Given the result of an action in relation to a task, you will decide what to do with the result.
-              The most important thing is that the action chosen reflects the result of the action in relation to the task.
+      const actionDecision = await this.model.makeSelectionDecision<string>(
+        `
+      The decision is what to do with the result of an action in relation to a task.
+      The most important thing is that the action chosen reflects the result of the action in relation to the task.
 
-              Tasks are a high-level description of what needs to be done, whereas steps are a more granular sub-task that needs to be completed as part of the greater task.
-              You should focus on the current step, but the task is provided for context.
+      Tasks are a high-level description of what needs to be done, whereas steps are a more granular sub-task that needs to be completed as part of the greater task.
+      You should focus on the current step, but the task is provided for context.
 
-              Even if the task is complete, a function is required to be called that will mark the step as finished.
-              A function should ALWAYS be called.
-              `,
-            },
-            {
-              role: "user",
-              content: `
-              The current task is: "${this.planOfAction.Title()}"
-              The current step is: "${this.planOfAction.DescribeCurrentStep(
-                true
-              )}"
-              The full task list is:
-              ${this.planOfAction
-                .Steps()
-                .map((s) => {
-                  return `- ${s.description}`;
-                })
-                .join("\n")}
-              The output of the action performed for the current step was: ${this.getShortenedString(
-                JSON.stringify(this.planOfAction.getCurrentStep().actionOutput)
-              )}
-
-              Here is some context about the current step:
-              ${this.planOfAction.getCurrentStep().context}
-
-              The source messages of this generated task are:
-              ${this.planOfAction
-                .SourceMessages()
-                .map((m) => {
-                  return `- ${m.role}: ${m.content}`;
-                })
-                .join("\n")}
-            `,
-            },
-          ],
-          functions: actions.map((a) => {
-            return {
-              ...a,
-            };
-          }),
-        });
+      The current task is: "${this.planOfAction.Title()}"
+      The current step is: "${this.planOfAction.DescribeCurrentStep(true)}"
+      The full task list is:
+      ${this.planOfAction
+        .Steps()
+        .map((s) => {
+          return `- ${s.description}`;
+        })
+        .join("\n")}
+      The output of the action performed for the current step was: ${this.getShortenedString(
+        JSON.stringify(this.planOfAction.getCurrentStep().actionOutput)
+      )}
+      `,
+        actions.map((a) => {
+          return {
+            label: a.description,
+            value: a.name,
+          };
+        })
+      );
 
       if (!actionDecision) {
         return {
           function_to_perform: "mark_failed_and_move_on",
-          withArgs: undefined,
         };
       }
 
-      const function_call = actionDecision.choices[0].message?.function_call;
+      const { decision, reason } = actionDecision;
 
       if (this.verbose) {
         this.sendPrimaryChannelMessage(
           `Finish decision for ${
             this.planOfAction.getCurrentStep().description
-          }: ${function_call?.name}`
+          }: ${decision} because "${reason}"`
         );
       }
 
-      if (function_call?.name === "none") {
+      if (!decision) {
         return {
           function_to_perform: "mark_failed_and_move_on",
-          withArgs: undefined,
         };
       }
 
-      const withArgs = function_call?.arguments
-        ? JSON.parse(function_call?.arguments)
-        : undefined;
-
       return {
-        function_to_perform: function_call?.name,
-        withArgs,
+        function_to_perform: decision,
       };
     } catch (error) {
       console.error(error);
       return {
         function_to_perform: "mark_failed_and_move_on",
-        withArgs: undefined,
       };
     }
   }

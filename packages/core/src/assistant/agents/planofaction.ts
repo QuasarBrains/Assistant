@@ -155,24 +155,29 @@ export class PlanOfAction {
     );
   }
 
-  public recordMarkdown(to: string) {
+  public getMarkdown() {
     const md = `
-# ${this.title}
+    # ${this.title}
+    
+    **Completed**: ${this.completed ? "YES" : "NO"}
+    **Finished**: ${this.finished ? "YES" : "NO"}
+    **Finish Reason**: ${this.finishReason ?? "N/A"}
+    
+    ## Steps
+    ${this.steps
+      .map((step, index) => {
+        return `- ${step.completed ? "[x]" : "[ ]"} Step ${index + 1}: ${
+          step.description
+        } (${step.required ? "REQUIRED" : "OPTIONAL"})
+        `;
+      })
+      .join("\n")}
+        `;
+    return md;
+  }
 
-**Completed**: ${this.completed ? "YES" : "NO"}
-**Finished**: ${this.finished ? "YES" : "NO"}
-**Finish Reason**: ${this.finishReason ?? "N/A"}
-
-## Steps
-${this.steps
-  .map((step, index) => {
-    return `- ${step.completed ? "[x]" : "[ ]"} Step ${index + 1}: ${
-      step.description
-    } (${step.required ? "REQUIRED" : "OPTIONAL"})
-    `;
-  })
-  .join("\n")}
-    `;
+  public recordMarkdown(to: string) {
+    const md = this.getMarkdown();
 
     return writeFileSync(
       to,
