@@ -1,4 +1,3 @@
-import { writeFileSync } from "fs";
 import { format } from "prettier";
 import { GlobalChannelMessage } from "../../channels/construct";
 import Assistant from "..";
@@ -71,6 +70,10 @@ export class PlanOfAction {
       })
       .join("\n")}
     `;
+  }
+
+  public Assistant() {
+    return this.assistant;
   }
 
   public SourceMessages() {
@@ -156,7 +159,7 @@ export class PlanOfAction {
       finishReason: this.finishReason,
     };
 
-    return writeFileSync(
+    return this.Assistant()?.recordToDatastore(
       to,
       format(JSON.stringify(planOfActionRecord, null, 2), {
         parser: "json",
@@ -188,7 +191,7 @@ export class PlanOfAction {
   public recordMarkdown(to: string) {
     const md = this.getMarkdown();
 
-    return writeFileSync(
+    return this.Assistant()?.recordToDatastore(
       to,
       format(md, {
         parser: "markdown",
@@ -199,6 +202,6 @@ export class PlanOfAction {
   public recordDescription(to: string) {
     const description = this.Describe();
 
-    return writeFileSync(to, description);
+    return this.Assistant()?.recordToDatastore(to, description);
   }
 }

@@ -6,7 +6,6 @@ import { ChatModel } from "../llm";
 import { PlanOfAction, Step } from "./planofaction";
 import { randomBytes } from "crypto";
 import { parseDateYYYYMMDD, parseTimeHHMM } from "../../utils/dates";
-import { writeFileSync } from "fs";
 import { format } from "prettier";
 
 export interface AssistantOptions {
@@ -106,7 +105,9 @@ export class Agent {
     );
     const poaMarkdown = this.planOfAction.getMarkdown();
     const output = `${poaMarkdown}\n\n${this.agentOutputHistory.join("\n")}`;
-    writeFileSync(outputFile, format(output, { parser: "markdown" }));
+    this.manager
+      ?.Assistant()
+      ?.recordToDatastore(outputFile, format(output, { parser: "markdown" }));
   }
 
   public async kill(reason: "ABORTED" | "FAILED" | "COMPLETED") {
