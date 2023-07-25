@@ -1,9 +1,11 @@
+/* eslint-disable no-unused-vars */
 import { ChannelManager } from ".";
 import { Module } from "../types/main";
 
 export type GlobalChannelMessage = {
   content: string;
   role: "system" | "user" | "assistant";
+  agent?: string;
 };
 export interface ChannelOptions {
   name: string;
@@ -223,5 +225,13 @@ export class Channel {
       console.error(error);
       return false;
     }
+  }
+
+  public getAgentHistory(agentName: string, conversation_id: string) {
+    const history = this.getConversationHistory(conversation_id);
+    const filteredHistory = history.filter(
+      (message) => message.agent === agentName
+    );
+    return filteredHistory;
   }
 }

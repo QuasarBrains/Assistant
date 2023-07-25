@@ -55,6 +55,11 @@ CHATFORM.addEventListener("submit", (e) => {
   renderChatHistory();
   renderChatLoading(true);
   e.target.elements.message.value = "";
+  let agentId = "";
+  if (MESSAGE.startsWith("#")) {
+    // match agent id in #agent_id
+    agentId = MESSAGE.match(/#(\w+)/)[1];
+  }
   fetch("/assistant/message", {
     method: "POST",
     headers: {
@@ -63,6 +68,7 @@ CHATFORM.addEventListener("submit", (e) => {
     body: JSON.stringify({
       message: MESSAGE,
       conversation_id: window.conversation_id,
+      agent: agentId,
     }),
   });
 });

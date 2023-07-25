@@ -23,7 +23,7 @@ const assistant = new Assistant({
   model: new Assistant.ChatModels.OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     agentModel: "gpt-4",
-    planningModel: "gpt-4",
+    planningModel: "gpt-3.5-turbo",
   }),
   datastoreDirectory: path.join(__dirname, "datastore"),
   verbose: true,

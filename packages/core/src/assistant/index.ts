@@ -161,6 +161,14 @@ export default class Assistant {
     conversation_id: string;
   }): Promise<boolean> {
     try {
+      if (
+        this.agentManager.messageBelongsToAgent(messages[messages.length - 1])
+      ) {
+        return this.agentManager.recieveAgentMessage(
+          messages[messages.length - 1]
+        );
+      }
+
       const pipelineResponse = await this.pipeline.userMessage({
         messages,
         primaryChannel: channel,

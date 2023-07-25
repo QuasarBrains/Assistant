@@ -1,12 +1,14 @@
 import path from "path";
 import { AgentManager } from ".";
-import { Channel } from "..";
+import Assistant, { Channel } from "..";
 import { Module, ModuleMethod } from "../../types/main";
 import { ChatModel } from "../llm";
 import { PlanOfAction, Step } from "./planofaction";
 import { randomBytes } from "crypto";
 import { parseDateYYYYMMDD, parseTimeHHMM } from "../../utils/dates";
 import { format } from "prettier";
+import { GlobalChannelMessage } from "../../channels/construct";
+import { Pipeline } from "../pipeline";
 
 export interface AssistantOptions {
   name: string;
@@ -31,7 +33,8 @@ export class Agent {
   private maxSectionLength: number;
   private maxStepRetries: number;
   private agentContext: { [key: string]: string } = {};
-  private agentOutputHistory: string[] = [];
+  private pipeline: Pipeline;
+  private awaitingClarification: boolean = false;
 
   constructor({
     name,
@@ -51,6 +54,11 @@ export class Agent {
     this.verbose = verbose ?? false;
     this.maxSectionLength = maxSectionLength ?? 100;
     this.maxStepRetries = maxStepRetries ?? 3;
+    this.pipeline = new Pipeline({
+      assistant: this.manager?.Assistant() as Assistant,
+      verbose: this.verbose,
+      agent: this,
+    });
   }
 
   public static getRandomNewName() {
@@ -63,10 +71,6 @@ export class Agent {
 
   public Name(): string {
     return this.name;
-  }
-
-  public OutputHistory(): string[] {
-    return this.agentOutputHistory;
   }
 
   public FormattedAgentName(): string {
@@ -84,6 +88,33 @@ export class Agent {
   public resume() {
     this.paused = false;
     this.run();
+  }
+
+  public async generatePlanOfAction() {
+    try {
+      const conversationHistory = this.primaryChannel.getConversationHistory(
+        this.primaryConversationId
+      );
+      const planOfAction = await this.model.generatePlanOfAction(
+        conversationHistory
+      );
+
+      if (!planOfAction) {
+        throw new Error("No plan of action generated");
+      }
+      this.planOfAction = planOfAction;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public getAgentConversationHistory() {
+    const history = this.primaryChannel.getAgentHistory(
+      this.Name(),
+      this.primaryConversationId
+    );
+    return history;
   }
 
   public record() {
@@ -104,7 +135,9 @@ export class Agent {
         .toUpperCase()}.md`
     );
     const poaMarkdown = this.planOfAction.getMarkdown();
-    const output = `${poaMarkdown}\n\n${this.agentOutputHistory.join("\n")}`;
+    const output = `${poaMarkdown}\n\n${this.getAgentConversationHistory().join(
+      "\n"
+    )}`;
     this.manager
       ?.Assistant()
       ?.recordToDatastore(outputFile, format(output, { parser: "markdown" }));
@@ -115,16 +148,16 @@ export class Agent {
       this.sendPrimaryChannelMessage(`I have been killed because: "${reason}"`);
     }
     if (reason === "COMPLETED") {
-      await this.planOfAction.markCompleted();
+      this.planOfAction.markCompleted();
     } else {
-      await this.planOfAction.markFinished(reason);
+      this.planOfAction.markFinished(reason);
     }
-    await this.record();
+    this.record();
   }
 
   public async complete() {
-    await this.planOfAction.markCompleted();
-    await this.record();
+    this.planOfAction.markCompleted();
+    this.record();
     await this.kill("COMPLETED");
     if (this.verbose) {
       this.sendPrimaryChannelMessage(
@@ -134,8 +167,8 @@ export class Agent {
   }
 
   public async finish(reason: "ABORTED" | "FAILED") {
-    await this.planOfAction.markFinished(reason);
-    await this.record();
+    this.planOfAction.markFinished(reason);
+    this.record();
     await this.kill(reason);
     if (this.verbose) {
       this.sendPrimaryChannelMessage(
@@ -182,19 +215,8 @@ export class Agent {
     return map;
   }
 
-  public async logToAgentOutput(message: string) {
-    try {
-      this.agentOutputHistory.push(format(message, { parser: "mdx" }));
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
   public async sendPrimaryChannelMessage(message: string) {
     try {
-      this.logToAgentOutput(message);
       await this.primaryChannel.sendMessageAsAssistant(
         {
           content: `${this.FormattedAgentName()}: ${message}`,
@@ -202,6 +224,54 @@ export class Agent {
         this.primaryConversationId
       );
       return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async getClarificationFromUser(clarification: string) {
+    try {
+      this.sendPrimaryChannelMessage(clarification);
+      this.pause();
+      this.awaitingClarification = true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async recieveMessage() {
+    try {
+      const history = this.getAgentConversationHistory();
+      const response = await this.startAgentResponse({
+        messages: history,
+        channel: this.primaryChannel,
+        conversation_id: this.primaryConversationId,
+      });
+      return response;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async startAgentResponse({
+    messages,
+    channel,
+    conversation_id,
+  }: {
+    messages: GlobalChannelMessage[];
+    channel: Channel;
+    conversation_id: string;
+  }): Promise<boolean> {
+    try {
+      const pipelineResponse = await this.pipeline.userMessageToAgent({
+        messages,
+        conversationId: conversation_id,
+      });
+
+      return pipelineResponse;
     } catch (error) {
       console.error(error);
       return false;
