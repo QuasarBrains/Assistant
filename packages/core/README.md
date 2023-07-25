@@ -39,7 +39,6 @@ Usage
 
 ```ts
 import Assistant from "@quasarbrains/assistant";
-import { config } from "dotenv";
 
 // Initialize an OpenAI-based Assistant
 const assistant = new Assistant({
