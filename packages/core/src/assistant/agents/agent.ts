@@ -1,6 +1,6 @@
 import path from "path";
 import { AgentManager } from ".";
-import Assistant, { Channel } from "..";
+import Assistant, { Channel, Service } from "..";
 import { Module, ModuleMethod } from "../../types/main";
 import { ChatModel } from "../llm";
 import { PlanOfAction, Step } from "./planofaction";
@@ -9,6 +9,8 @@ import { parseDateYYYYMMDD, parseTimeHHMM } from "../../utils/dates";
 import { format } from "prettier";
 import { GlobalChannelMessage } from "../../channels/construct";
 import { Pipeline } from "../pipeline";
+import { sanitizeFileName } from "../../utils/sanitization";
+import AgentService from "./services/agentService";
 
 export interface AssistantOptions {
   name: string;
@@ -35,6 +37,7 @@ export class Agent {
   private agentContext: { [key: string]: string } = {};
   private pipeline: Pipeline;
   private awaitingClarification: boolean = false;
+  private agentService: Service;
 
   constructor({
     name,
@@ -59,6 +62,7 @@ export class Agent {
       verbose: this.verbose,
       agent: this,
     });
+    this.agentService = new AgentService({ agent: this });
   }
 
   public static getRandomNewName() {
@@ -124,19 +128,14 @@ export class Agent {
   public record() {
     const today = parseDateYYYYMMDD(new Date());
     const now = parseTimeHHMM(new Date());
-    const outputLocation = this.manager?.Assistant()?.DatastoreDirectory();
-    if (!outputLocation) {
-      throw new Error(
-        "No output location found, please provide a datastoreDirectory to the assistant instance"
-      );
-    }
     const outputFile = path.join(
-      outputLocation ?? "",
       "agents",
       "records",
-      `${this.Name()}-${today}-${now}-${this.planOfAction
-        .Title()
-        .toUpperCase()}.md`
+      sanitizeFileName(
+        `${this.Name()}-${today}-${now}-${this.planOfAction
+          .Title()
+          .toUpperCase()}.md`
+      )
     );
     const poaMarkdown = this.planOfAction.getMarkdown();
     const output = `${poaMarkdown}\n\n${this.getAgentConversationHistory().join(
@@ -207,7 +206,16 @@ export class Agent {
           return c;
         }) ?? [];
 
-    return [...services, ...channels];
+    const others: Module[] = [
+      {
+        name: this.agentService.Name(),
+        type: "service",
+        description: this.agentService.Description(),
+        schema: this.agentService.Schema(),
+      },
+    ];
+
+    return [...services, ...channels, ...others];
   }
 
   public modulesMap(): { [key: string]: Module } {

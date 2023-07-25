@@ -69,3 +69,7 @@ It's worth noting that the `Agent` also may communicate with the `Assistant` at 
 (1) Stable and Low Priority, Not Time Sensitive
 
 The priority queue will prioritize by rank first, then first come first serve. Level 1s and 2s will interrupt any lower-level events, and lower level event queues will not be reacted to until the 2 higher levels are complete. Level 1 must be completed before level 2, level 2 must be completed before level 3, and so on and so forth. The reason for these severity levels is mostly due to the implications of the assistant for use with security systems. **The priority queue will be preemptive.**
+
+## The road to 0.1.0
+
+The initial release will be 0.1.0, meaning the project is useable, but there will be a lot to change as the project grows. The goals for this release are to have functional `Service`s, `Assistant`s, and `Channels`. The consumer will be able to create an assistant capable of being extended with these capabilities.

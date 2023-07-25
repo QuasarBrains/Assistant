@@ -23,7 +23,7 @@ const assistant = new Assistant({
   model: new Assistant.ChatModels.OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     agentModel: "gpt-4",
-    planningModel: "gpt-3.5-turbo",
+    planningModel: "gpt-4",
   }),
   datastoreDirectory: path.join(__dirname, "datastore"),
   verbose: true,
@@ -66,6 +66,12 @@ io.on("connection", (socket) => {
 app.post("/api/webhook", (req, res) => {
   io.emit("assistant-message", req.body.data.content);
   res.sendStatus(200);
+});
+
+app.post("/api/test", (req, res) => {
+  res.send({
+    message: "Hello world!",
+  });
 });
 
 server.listen(PORT, () => {

@@ -34,6 +34,10 @@ export class Pipeline {
         .makeSelectionDecision(
           `
         Based on the following messages, you should decide whether or not an action needs to be taken.
+        Basically, if the user is asking you to do something, or an action is implied to be taken, then an action should be taken.
+        Choosing action will allow the system to parse the user's request and generate a plan of action.
+        If the user is just making a statement, or being otherwise conversational, and there's no implication of an action, don't choose action.
+        This will allow the system to parse the user's message and generate a response.
 
         ${messages
           .map((message) => {
@@ -83,7 +87,10 @@ export class Pipeline {
           if (this.verbose) {
             primaryChannel.sendMessageAsAssistant(
               {
-                content: "Plan of action generated, creating agent...",
+                content:
+                  "Plan of action generated..." +
+                  "\n" +
+                  planOfAction.Describe(),
               },
               conversationId
             );
@@ -115,14 +122,6 @@ export class Pipeline {
           this.Assistant()?.AgentManager().initAndStartAgent(newAgent.Name());
           return true;
         case "converse":
-          if (this.verbose) {
-            primaryChannel.sendMessageAsAssistant(
-              {
-                content: "Conversing with user...",
-              },
-              conversationId
-            );
-          }
           const response = await this.assistant
             ?.Model()
             .getChatResponse({ messages });
@@ -155,6 +154,15 @@ export class Pipeline {
       }
 
       const responseMode = await this.decideResponseMode(messages);
+
+      if (this.verbose) {
+        primaryChannel.sendMessageAsAssistant(
+          {
+            content: "Response mode: " + responseMode,
+          },
+          conversationId
+        );
+      }
 
       return this.respondBasedOnMode({
         messages,
@@ -203,6 +211,10 @@ export class Pipeline {
       }
 
       const responseMode = await this.decideResponseMode(messages);
+
+      if (this.verbose) {
+        this.agent.sendPrimaryChannelMessage("Response mode: " + responseMode);
+      }
 
       return this.responseAsAgentBasedOnMode({
         mode: responseMode ?? "converse",

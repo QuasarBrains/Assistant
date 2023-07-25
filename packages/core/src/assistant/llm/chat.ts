@@ -142,7 +142,8 @@ export class OpenAIChatModel extends ChatModel {
           {
             role: "system",
             content: `
-            📄⚙️Umsg+ctx=🗒️💡,💼⮕POA. 🚀Roadmap, not detailed guide, code mention⬜️goal-linked. Ex1: 📧John, 🚫🤝Thurs. ➡️POA: 📧John, explain abs. 💠1: Find JD's 📧 💠2: Thurs. meet. purpose 💠3: User abs. reason 💠4: 📧John, explain abs. 💠5: 📧success? 💠6: User, 📧 sent? Ex2: ℹ️TypeScript? ➡️POA: ℹ️User on TS 💠1: 🌐🔍TS 💠2: Top3 🌐 💠3: Summary of top3 💠4: 💡reply to user 💠5: Send reply. 🅱️POA⚙️📄💡, short+human clear, no Req./Opt. labels. REQUIRED=🔒, OPTIONAL=🔓. POA➡️agent tasks. Balanced steps, order matters! K.I.S.S. No msg parse.            `,
+            📄⚙️Umsg+ctx=🗒️💡,💼⮕POA. 🚀Action-based roadmap, not detailed guide, code mention⬜️goal-linked. Ex1: 📧John, 🚫🤝Thurs. ➡️POA: Perform: 📧John, explain abs. 💠1: Perform: Find JD's 📧 💠2: Perform: Understand Thurs. meet. purpose 💠3: Perform: Uncover user abs. reason 💠4: Perform: 📧John, explain abs. 💠5: Check: 📧success? 💠6: Verify: User, 📧 sent? Ex2: ℹ️TypeScript? ➡️POA: ℹ️Inform User on TS 💠1: Perform: 🌐🔍TS 💠2: Select: Top3 🌐 💠3: Compose: Summary of top3 💠4: Create: 💡reply to user 💠5: Execute: Send reply. 🅱️POA⚙️📄💡, short+human clear, no Req./Opt. labels. REQUIRED=🔒, OPTIONAL=🔓. POA➡️Agent performs tasks. Balanced steps, order matters! K.I.S.S. No msg parse.
+            `,
           },
           {
             role: "user",
