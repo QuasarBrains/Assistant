@@ -168,27 +168,45 @@ export class Pipeline {
     }
   }
 
+  public responseAsAgentBasedOnMode({ mode }: { mode: ResponseModes }) {
+    if (!this.agent) {
+      throw new Error("No agent found.");
+    }
+
+    try {
+      switch (mode) {
+        case "action":
+          return this.agent?.getActionResponse();
+        case "converse":
+          return this.agent?.getConversationalResponse();
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
   public async userMessageToAgent({
     messages,
-    conversationId,
   }: {
     messages: GlobalChannelMessage[];
-    conversationId: string;
   }) {
     try {
-      if (!this.assistant?.Model() || !this.agent) {
-        return false;
-      }
-      const planOfAction = this.agent.getPlanOfAction();
-
-      if (!planOfAction) {
-        return false;
+      if (!this.assistant?.Model()) {
+        throw new Error("No model found.");
       }
 
-      this.agent.sendPrimaryChannelMessage(
-        `Message received by agent ${this.agent.Name()}.`
-      );
-      return true;
+      if (!this.agent) {
+        throw new Error("No agent found.");
+      }
+
+      const responseMode = await this.decideResponseMode(messages);
+
+      return this.responseAsAgentBasedOnMode({
+        mode: responseMode ?? "converse",
+      });
     } catch (error) {
       console.error(error);
       return false;

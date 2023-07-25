@@ -77,6 +77,10 @@ export class Agent {
     return `Agent ${this.Name()}`;
   }
 
+  public PrimaryChannel(): Channel {
+    return this.primaryChannel;
+  }
+
   public isPaused(): boolean {
     return this.paused;
   }
@@ -246,8 +250,6 @@ export class Agent {
       const history = this.getAgentConversationHistory();
       const response = await this.startAgentResponse({
         messages: history,
-        channel: this.primaryChannel,
-        conversation_id: this.primaryConversationId,
       });
       return response;
     } catch (error) {
@@ -258,17 +260,12 @@ export class Agent {
 
   public async startAgentResponse({
     messages,
-    channel,
-    conversation_id,
   }: {
     messages: GlobalChannelMessage[];
-    channel: Channel;
-    conversation_id: string;
   }): Promise<boolean> {
     try {
       const pipelineResponse = await this.pipeline.userMessageToAgent({
         messages,
-        conversationId: conversation_id,
       });
 
       return pipelineResponse;
@@ -917,6 +914,32 @@ export class Agent {
       return {
         function_to_perform: "mark_failed_and_move_on",
       };
+    }
+  }
+
+  public async getConversationalResponse() {
+    try {
+      const history = this.getAgentConversationHistory();
+      const response = await this.model.getChatResponse({ messages: history });
+      this.sendPrimaryChannelMessage(response.content);
+      return false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async getActionResponse() {
+    try {
+      if (this.awaitingClarification) {
+        this.awaitingClarification = false;
+        this.resume();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error(error);
+      return false;
     }
   }
 }
