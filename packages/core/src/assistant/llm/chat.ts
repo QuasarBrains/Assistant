@@ -5,7 +5,7 @@ import {
   CreateChatCompletionRequest,
 } from "openai-edge";
 import { ChatModel } from ".";
-import { GlobalChannelMessage } from "../../channels/construct";
+import { GlobalChannelMessage } from "../../types/main";
 import Assistant from "..";
 
 export type AllowedOpenAIChatModels = CreateChatCompletionRequest["model"];

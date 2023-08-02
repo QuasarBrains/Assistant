@@ -1,5 +1,5 @@
 import Assistant from "..";
-import { GlobalChannelMessage } from "../../channels/construct";
+import { GlobalChannelMessage } from "../../types/main";
 import { Agent } from "./agent";
 
 export interface AgentManagerOptions {
@@ -42,7 +42,7 @@ export class AgentManager {
     if (!agent) {
       throw new Error(`Agent with name ${agentName} not found.`);
     }
-    agent.initAndStart();
+    agent.init();
   }
 
   public getAgent(agentName: string): Agent {
@@ -51,35 +51,10 @@ export class AgentManager {
 
   public getAllAgentsDescribed() {
     const descriptions = Object.values(this.agents).map((agent) => {
-      return `- ${agent.Name()}: ${agent.getPlanOfAction().Describe()}`;
+      return `- ${agent.Name()}`;
     });
 
     return descriptions;
-  }
-
-  public pauseAgent(agentName: string) {
-    this.agents[agentName].pause();
-  }
-
-  public resumeAgent(agentName: string) {
-    this.agents[agentName].resume();
-  }
-
-  public pauseAllAgents() {
-    Object.values(this.agents).forEach((agent) => {
-      agent.pause();
-    });
-  }
-
-  public async killAgent(agentName: string) {
-    try {
-      await this.agents[agentName].kill("ABORTED");
-      delete this.agents[agentName];
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
   }
 
   public messageBelongsToAgent(message: GlobalChannelMessage) {

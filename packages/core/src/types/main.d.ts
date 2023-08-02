@@ -1,5 +1,11 @@
 import { JSONSchema } from "./jsonschema";
 
+export type GlobalChannelMessage = {
+  content: string;
+  role: "system" | "user" | "assistant";
+  agent?: string;
+};
+
 export interface ModuleMethod {
   name: string;
   description: string;
@@ -17,3 +23,11 @@ export interface Module {
 }
 
 export type ModuleList = Module[];
+
+export interface DiscreteAction {
+  defined: string;
+}
+
+export type DiscreteActionDerivedFromMessage = DiscreteAction & {
+  source_text: string;
+};

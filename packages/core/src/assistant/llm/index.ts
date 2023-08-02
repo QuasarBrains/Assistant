@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import Assistant from "..";
-import { GlobalChannelMessage } from "../../channels/construct";
+import { GlobalChannelMessage } from "../../types/main";
 import { PlanOfAction } from "../agents/planofaction";
 
 export abstract class ChatModel {

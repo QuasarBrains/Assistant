@@ -1,6 +1,12 @@
+import { format } from "prettier";
 import Assistant from "..";
-import { Channel, GlobalChannelMessage } from "../../channels/construct";
+import { Channel } from "../../channels/construct";
+import {
+  DiscreteActionDerivedFromMessage,
+  GlobalChannelMessage,
+} from "../../types/main";
 import { Agent } from "../agents/agent";
+import { PROMPTS } from "../llm/prompts";
 
 export interface PipelineOptions {
   assistant: Assistant;
@@ -25,117 +31,154 @@ export class Pipeline {
     return this.assistant;
   }
 
-  public async decideResponseMode(
-    messages: GlobalChannelMessage[]
-  ): Promise<ResponseModes | null> {
+  public async getDiscreteActions(
+    prompt: string
+  ): Promise<Record<string, DiscreteActionDerivedFromMessage[]> | undefined> {
     try {
-      const decision = await this.Assistant()
-        .Model()
-        .makeSelectionDecision(
-          `
-        Based on the following messages, you should decide whether or not an action needs to be taken.
-        Basically, if the user is asking you to do something, or an action is implied to be taken, then an action should be taken.
-        Choosing action will allow the system to parse the user's request and generate a plan of action.
-        If the user is just making a statement, or being otherwise conversational, and there's no implication of an action, don't choose action.
-        This will allow the system to parse the user's message and generate a response.
+      const response = await this.assistant.Model()?.createChatCompletion({
+        model: this.assistant.Model()?.PlanningModel(),
+        messages: [
+          {
+            role: "system",
+            content: PROMPTS.extractDiscreteActions.system.normal,
+          },
+          {
+            role: "user",
+            content: `
+            The user's message is:
+            "${prompt}"
+            `,
+          },
+        ],
+        functions: [
+          {
+            name: "extract_discrete_actions",
+            parameters: {
+              type: "object",
+              properties: {
+                groups: {
+                  type: "array",
+                  description: "A list of action groups.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      group_name: {
+                        type: "string",
+                        description:
+                          "A short name to describe the group, based off the actions in it.",
+                      },
+                      actions: {
+                        type: "array",
+                        description:
+                          "A list of actions in the group, in the order that they should be taken.",
+                        items: {
+                          type: "object",
+                          properties: {
+                            source_text: {
+                              type: "string",
+                              description:
+                                "The text in the user's message that corresponds to this step.",
+                            },
+                            defined: {
+                              type: "string",
+                              description:
+                                "The action defined by the user's message.",
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              required: ["groups"],
+            },
+          },
+        ],
+        function_call: {
+          name: "extract_discrete_actions",
+        },
+      });
 
-        ${messages
-          .map((message) => {
-            return `- ${message.content}`;
-          })
-          .join("\n")}
-        `,
-          [
-            {
-              label: "An action SHOULD NOT be taken.",
-              value: "converse",
-            },
-            {
-              label: "An action SHOULD be taken.",
-              value: "action",
-            },
-          ]
-        );
-      return decision?.decision as ResponseModes;
+      const firstChoice = response?.choices[0].message;
+
+      if (!firstChoice || !firstChoice?.function_call) {
+        return undefined;
+      }
+
+      const { name, arguments: args } = firstChoice?.function_call;
+
+      if (!name || !args) {
+        return undefined;
+      }
+
+      const extractDiscreteActions = (args: {
+        groups: {
+          group_name: string;
+          actions: {
+            source_text: string;
+            defined: string;
+          }[];
+        }[];
+      }): Record<string, DiscreteActionDerivedFromMessage[]> => {
+        const actions: Record<string, DiscreteActionDerivedFromMessage[]> = {};
+
+        args.groups.forEach((group) => {
+          actions[group.group_name] = group.actions.map((action) => {
+            return {
+              ...action,
+              source_text: action.source_text,
+            };
+          });
+        });
+
+        return actions;
+      };
+
+      const actions = extractDiscreteActions(JSON.parse(args) as any);
+
+      return actions;
     } catch (error) {
       console.error(error);
-      return null;
+      return undefined;
     }
   }
 
-  public async respondBasedOnMode({
+  public async getResponseToUserMessage({
     messages,
-    mode,
-    primaryChannel,
-    conversationId,
   }: {
     messages: GlobalChannelMessage[];
-    mode: ResponseModes;
-    primaryChannel: Channel;
-    conversationId: string;
   }) {
     try {
-      switch (mode) {
-        case "action":
-          const planOfAction = await this.assistant
-            ?.Model()
-            .generatePlanOfAction(messages);
+      const response = await this.assistant.Model()?.createChatCompletion({
+        model: this.assistant.Model()?.AgentModel(),
+        messages: [
+          {
+            role: "system",
+            content: `
+             You are an assistant with the following description:
+             "${this.assistant.Description()}"
+   
+             You are to respond to the user's message as an assistant.
+             Instructions by the user are automatically parsed and executed by the system, you don't have to worry about them.
+             Always respond as if you are capable of performing the actions, even if you are not sure, as the system will handle them.
+             You should respond as if you have the intent to follow the instructions in the future.
+             `,
+          },
+          ...messages,
+        ],
+      });
 
-          if (!planOfAction) {
-            return false;
-          }
-          if (this.verbose) {
-            primaryChannel.sendMessageAsAssistant(
-              {
-                content:
-                  "Plan of action generated..." +
-                  "\n" +
-                  planOfAction.Describe(),
-              },
-              conversationId
-            );
-            primaryChannel.sendMessageAsAssistant(
-              {
-                content: "Creating new agent...",
-              },
-              conversationId
-            );
-          }
-          const newAgent = this.assistant.AgentManager().registerAgent(
-            new Assistant.Agent({
-              name: Assistant.Agent.getRandomNewName(),
-              model: this.assistant?.Model(),
-              planOfAction,
-              primaryChannel,
-              primaryConversationId: conversationId,
-              verbose: this.verbose,
-            })
-          );
-          if (this.verbose) {
-            primaryChannel.sendMessageAsAssistant(
-              {
-                content: "Agent created, initializing...",
-              },
-              conversationId
-            );
-          }
-          this.Assistant()?.AgentManager().initAndStartAgent(newAgent.Name());
-          return true;
-        case "converse":
-          const response = await this.assistant
-            ?.Model()
-            .getChatResponse({ messages });
-          if (!response) {
-            return false;
-          }
-          primaryChannel.sendMessageAsAssistant(response, conversationId);
-          return true;
-        default:
-          return false;
+      const firstChoice = response?.choices[0].message;
+
+      if (!firstChoice) {
+        return undefined;
       }
+
+      return firstChoice.content;
     } catch (error) {
       console.error(error);
-      return false;
+      return undefined;
     }
   }
 
@@ -152,44 +195,49 @@ export class Pipeline {
       if (!this.assistant?.Model()) {
         return false;
       }
+      const discreteActions = await this.getDiscreteActions(
+        messages[messages.length - 1].content
+      );
 
-      const responseMode = await this.decideResponseMode(messages);
+      if (!discreteActions) {
+        return false;
+      }
 
       if (this.verbose) {
+        console.info("Discrete actions:");
+        console.info(discreteActions);
         primaryChannel.sendMessageAsAssistant(
           {
-            content: "Response mode: " + responseMode,
+            content: "Picked discrete actions.",
+          },
+          conversationId
+        );
+        primaryChannel.sendMessageAsAssistant(
+          {
+            content: format(JSON.stringify(discreteActions, null, 2), {
+              parser: "json",
+            }),
           },
           conversationId
         );
       }
 
-      return this.respondBasedOnMode({
+      const response = await this.getResponseToUserMessage({
         messages,
-        mode: responseMode ?? "converse",
-        primaryChannel,
-        conversationId,
       });
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
 
-  public responseAsAgentBasedOnMode({ mode }: { mode: ResponseModes }) {
-    if (!this.agent) {
-      throw new Error("No agent found.");
-    }
-
-    try {
-      switch (mode) {
-        case "action":
-          return this.agent?.getActionResponse();
-        case "converse":
-          return this.agent?.getConversationalResponse();
-        default:
-          return false;
+      if (!response) {
+        return false;
       }
+
+      primaryChannel.sendMessageAsAssistant(
+        {
+          content: response,
+        },
+        conversationId
+      );
+
+      return true;
     } catch (error) {
       console.error(error);
       return false;
@@ -209,16 +257,6 @@ export class Pipeline {
       if (!this.agent) {
         throw new Error("No agent found.");
       }
-
-      const responseMode = await this.decideResponseMode(messages);
-
-      if (this.verbose) {
-        this.agent.sendPrimaryChannelMessage("Response mode: " + responseMode);
-      }
-
-      return this.responseAsAgentBasedOnMode({
-        mode: responseMode ?? "converse",
-      });
     } catch (error) {
       console.error(error);
       return false;

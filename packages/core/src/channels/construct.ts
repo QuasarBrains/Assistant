@@ -1,12 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { ChannelManager } from ".";
-import { Module } from "../types/main";
+import { GlobalChannelMessage, Module } from "../types/main";
 
-export type GlobalChannelMessage = {
-  content: string;
-  role: "system" | "user" | "assistant";
-  agent?: string;
-};
 export interface ChannelOptions {
   name: string;
   description: string;
