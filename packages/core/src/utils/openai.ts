@@ -20,6 +20,9 @@ export class OpenAIWrapper {
 
   constructor(config: Configuration) {
     this.OpenAIApi = new OpenAIApi(config);
+    if (!config.apiKey) {
+      throw new Error("OpenAI API key is required.");
+    }
   }
 
   public getApi(): OpenAIApi {

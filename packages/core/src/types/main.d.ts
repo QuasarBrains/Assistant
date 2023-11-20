@@ -4,6 +4,7 @@ export type GlobalChannelMessage = {
   content: string;
   role: "system" | "user" | "assistant";
   agent?: string;
+  type?: "text" | "callout" | "log";
 };
 
 export interface ModuleMethod {
@@ -23,6 +24,15 @@ export interface Module {
 }
 
 export type ModuleList = Module[];
+
+export type DiscreteActionGroup = {
+  name: string;
+  actions: DiscreteActionDerivedFromMessage[];
+};
+
+export type DiscreteActionsGrouped = {
+  groups: DiscreteActionGroup[];
+};
 
 export interface DiscreteAction {
   defined: string;

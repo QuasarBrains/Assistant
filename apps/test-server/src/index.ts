@@ -36,7 +36,6 @@ const PORT = Number(process.env.PORT) || 3000;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 const assistantServer = new AssistantServer({
-  port: PORT,
   log: true,
   assistant,
   webhook_url: WEBHOOK_URL,
@@ -65,7 +64,7 @@ io.on("connection", (socket) => {
 });
 
 app.post("/api/webhook", (req, res) => {
-  io.emit("assistant-message", req.body.data.content);
+  io.emit("assistant-message", req.body.data);
   res.sendStatus(200);
 });
 

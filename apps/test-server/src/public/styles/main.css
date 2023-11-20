@@ -37,7 +37,6 @@
   padding: 0;
   padding: 24px;
   font-size: 16px;
-  border-top: 1px solid var(--contrast);
 }
 @media screen and (min-width: 768px) {
   #chat-history .chat-item {
@@ -49,4 +48,10 @@
 }
 #chat-history .user {
   background-color: var(--background-color);
-}/*# sourceMappingURL=main.css.map */
+}
+#chat-history .log {
+  padding-left: 14px;
+  border-left: 2px solid var(--contrast);
+}
+
+/*# sourceMappingURL=main.css.map */

@@ -1,6 +1,9 @@
+import { unzip } from "zlib";
 import Assistant from "..";
-import { GlobalChannelMessage } from "../../types/main";
+import { DiscreteActionGroup, GlobalChannelMessage } from "../../types/main";
 import { Agent } from "./agent";
+import { ChatModel } from "../llm";
+import { Channel } from "../../channels/construct";
 
 export interface AgentManagerOptions {
   assistant: Assistant;
@@ -43,6 +46,7 @@ export class AgentManager {
       throw new Error(`Agent with name ${agentName} not found.`);
     }
     agent.init();
+    agent.start();
   }
 
   public getAgent(agentName: string): Agent {
@@ -81,6 +85,34 @@ export class AgentManager {
     } catch (error) {
       console.error(error);
       return false;
+    }
+  }
+
+  public async dispatchAgentForActionGroup(
+    actionGroup: DiscreteActionGroup,
+    primaryChannel: Channel,
+    primaryConversationId: string
+  ) {
+    try {
+      if (!this.Assistant()) {
+        return undefined;
+      }
+      const name = Agent.getRandomNewName();
+      const agent = new Agent({
+        name,
+        model: this.Assistant()?.Model() as ChatModel,
+        primaryChannel,
+        actionGroup,
+        primaryConversationId,
+      });
+
+      this.registerAgent(agent);
+      this.initAndStartAgent(agent.Name());
+
+      return agent;
+    } catch (err) {
+      console.error(err);
+      return undefined;
     }
   }
 }

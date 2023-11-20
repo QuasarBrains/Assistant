@@ -10,8 +10,7 @@ const getRandomID = () => {
   return Math.random().toString(36).substr(2, 9);
 };
 
-window.conversation_id =
-  sessionStorage.getItem("conversation_id") || getRandomID();
+window.conversation_id = sessionStorage.getItem("conversation_id") || getRandomID();
 
 sessionStorage.setItem("conversation_id", window.conversation_id);
 
@@ -28,6 +27,9 @@ const renderChatHistory = () => {
   chatHistory.forEach((chat) => {
     const chatItem = document.createElement("li");
     chatItem.classList.add("chat-item");
+    if (chat.type) {
+      chatItem.classList.add(chat.type);
+    }
     chatItem.classList.add(chat.role);
     chatItem.innerText = chat.content;
     CHATHISTORY.appendChild(chatItem);
@@ -76,7 +78,8 @@ CHATFORM.addEventListener("submit", (e) => {
 window.socket.on("assistant-message", (message) => {
   chatHistory.push({
     role: "assistant",
-    content: message,
+    content: message.content,
+    ...message,
   });
   renderChatHistory();
   renderChatLoading(false);
@@ -84,15 +87,12 @@ window.socket.on("assistant-message", (message) => {
 
 // * FETCH CONVERSATION HISTORY
 (async () => {
-  const response = await fetch(
-    `/assistant/history?conversation_id=${window.conversation_id}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await fetch(`/assistant/history?conversation_id=${window.conversation_id}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
   const data = await response.json();
   chatHistory.push(...data.data);
   renderChatHistory();

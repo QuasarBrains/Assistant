@@ -14,6 +14,8 @@ export abstract class ChatModel {
     this.assistant = assistant;
   }
 
+  public abstract getCleanedMessages(messages: GlobalChannelMessage[]): any[];
+
   public abstract getChatResponseSimple({
     message,
     system_prompt,

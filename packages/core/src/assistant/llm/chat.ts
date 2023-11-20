@@ -1,9 +1,4 @@
-import {
-  Configuration,
-  OpenAIApi,
-  ResponseTypes,
-  CreateChatCompletionRequest,
-} from "openai-edge";
+import { Configuration, OpenAIApi, ResponseTypes, CreateChatCompletionRequest } from "openai-edge";
 import { ChatModel } from ".";
 import { GlobalChannelMessage } from "../../types/main";
 import Assistant from "..";
@@ -27,8 +22,7 @@ export class OpenAIChatModel extends ChatModel {
   constructor({ apiKey, agentModel, planningModel }: OpenAIOptions) {
     super();
     this.agentModel = agentModel || OpenAIChatModel.DEFAULT_AGENT_MODEL;
-    this.planningModel =
-      planningModel || OpenAIChatModel.DEFAULT_PLANNING_MODEL;
+    this.planningModel = planningModel || OpenAIChatModel.DEFAULT_PLANNING_MODEL;
     this.configuration = new Configuration({
       apiKey,
     });
@@ -45,6 +39,10 @@ export class OpenAIChatModel extends ChatModel {
 
   public PlanningModel() {
     return this.planningModel;
+  }
+
+  public getCleanedMessages(messages: GlobalChannelMessage[]) {
+    return messages.map((m) => ({ content: m.content, role: m.role }));
   }
 
   public async getChatResponseSimple({
@@ -69,8 +67,7 @@ export class OpenAIChatModel extends ChatModel {
         ],
       });
 
-      const result =
-        (await response.json()) as ResponseTypes["createChatCompletion"];
+      const result = (await response.json()) as ResponseTypes["createChatCompletion"];
 
       const content = result.choices[0].message?.content;
 
@@ -93,11 +90,10 @@ export class OpenAIChatModel extends ChatModel {
     try {
       const response = await this.api.createChatCompletion({
         model: this.agentModel,
-        messages,
+        messages: this.getCleanedMessages(messages),
       });
 
-      const result =
-        (await response.json()) as ResponseTypes["createChatCompletion"];
+      const result = (await response.json()) as ResponseTypes["createChatCompletion"];
 
       const content = result.choices[0].message?.content;
 
@@ -160,8 +156,7 @@ export class OpenAIChatModel extends ChatModel {
         functions: [
           {
             name: "generate_plan_of_action",
-            description:
-              "Generates a plan of action given a series of high-level steps.",
+            description: "Generates a plan of action given a series of high-level steps.",
             parameters: {
               type: "object",
               properties: {
@@ -199,8 +194,7 @@ export class OpenAIChatModel extends ChatModel {
         return undefined;
       }
 
-      const planOfActionFunctionCall =
-        response.choices[0].message?.function_call;
+      const planOfActionFunctionCall = response.choices[0].message?.function_call;
 
       if (!planOfActionFunctionCall) {
         return undefined;
@@ -255,6 +249,7 @@ export class OpenAIChatModel extends ChatModel {
     decisionDescription: string
   ): Promise<{ decision: boolean; reason: string } | undefined> {
     try {
+      console.log("Making boolean decision for description: ", decisionDescription);
       const response = await this.createChatCompletion({
         model: this.PlanningModel(),
         messages: [
@@ -359,8 +354,7 @@ export class OpenAIChatModel extends ChatModel {
         functions: [
           {
             name: "give_selection_decision",
-            description:
-              "Returns a decision object based on a selection input.",
+            description: "Returns a decision object based on a selection input.",
             parameters: {
               type: "object",
               properties: {

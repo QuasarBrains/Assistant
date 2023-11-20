@@ -1,12 +1,10 @@
 import { format } from "prettier";
 import Assistant from "..";
 import { Channel } from "../../channels/construct";
-import {
-  DiscreteActionDerivedFromMessage,
-  GlobalChannelMessage,
-} from "../../types/main";
+import { DiscreteActionsGrouped, GlobalChannelMessage } from "../../types/main";
 import { Agent } from "../agents/agent";
 import { PROMPTS } from "../llm/prompts";
+import { parseFunctionCallOfType } from "../utils/function_calling";
 
 export interface PipelineOptions {
   assistant: Assistant;
@@ -31,9 +29,7 @@ export class Pipeline {
     return this.assistant;
   }
 
-  public async getDiscreteActions(
-    prompt: string
-  ): Promise<Record<string, DiscreteActionDerivedFromMessage[]> | undefined> {
+  public async getDiscreteActions(prompt: string): Promise<DiscreteActionsGrouped | undefined> {
     try {
       const response = await this.assistant.Model()?.createChatCompletion({
         model: this.assistant.Model()?.PlanningModel(),
@@ -62,7 +58,7 @@ export class Pipeline {
                   items: {
                     type: "object",
                     properties: {
-                      group_name: {
+                      name: {
                         type: "string",
                         description:
                           "A short name to describe the group, based off the actions in it.",
@@ -81,8 +77,7 @@ export class Pipeline {
                             },
                             defined: {
                               type: "string",
-                              description:
-                                "The action defined by the user's message.",
+                              description: "A description of the action which should be taken.",
                             },
                           },
                         },
@@ -100,7 +95,7 @@ export class Pipeline {
         },
       });
 
-      const firstChoice = response?.choices[0].message;
+      const firstChoice = response?.choices?.[0].message;
 
       if (!firstChoice || !firstChoice?.function_call) {
         return undefined;
@@ -112,43 +107,20 @@ export class Pipeline {
         return undefined;
       }
 
-      const extractDiscreteActions = (args: {
-        groups: {
-          group_name: string;
-          actions: {
-            source_text: string;
-            defined: string;
-          }[];
-        }[];
-      }): Record<string, DiscreteActionDerivedFromMessage[]> => {
-        const actions: Record<string, DiscreteActionDerivedFromMessage[]> = {};
+      const parsedActions = parseFunctionCallOfType<DiscreteActionsGrouped | undefined>(args);
 
-        args.groups.forEach((group) => {
-          actions[group.group_name] = group.actions.map((action) => {
-            return {
-              ...action,
-              source_text: action.source_text,
-            };
-          });
-        });
+      if (!parsedActions) {
+        return undefined;
+      }
 
-        return actions;
-      };
-
-      const actions = extractDiscreteActions(JSON.parse(args) as any);
-
-      return actions;
+      return parsedActions;
     } catch (error) {
       console.error(error);
       return undefined;
     }
   }
 
-  public async getResponseToUserMessage({
-    messages,
-  }: {
-    messages: GlobalChannelMessage[];
-  }) {
+  public async getResponseToUserMessage({ messages }: { messages: GlobalChannelMessage[] }) {
     try {
       const response = await this.assistant.Model()?.createChatCompletion({
         model: this.assistant.Model()?.AgentModel(),
@@ -165,7 +137,7 @@ export class Pipeline {
              You should respond as if you have the intent to follow the instructions in the future.
              `,
           },
-          ...messages,
+          ...this.Assistant().Model().getCleanedMessages(messages),
         ],
       });
 
@@ -182,6 +154,44 @@ export class Pipeline {
     }
   }
 
+  public async actionIsCompleteByMessage({
+    response,
+    actions,
+  }: {
+    response: string;
+    actions: DiscreteActionsGrouped;
+  }): Promise<boolean> {
+    try {
+      const decision = await this.Assistant().Model()?.makeBooleanDecision(`
+        Are the following actions properly completed solely by the response?
+        You should respond yes if the actions described only require the agent to respond with the given response.
+        You should respond no if the actions described require the agent to do something else as well as the initial response.
+
+        Here are the actions that the agent must perform:
+        ${actions.groups
+          .map((action) => {
+            return `${action.name}: \n${action.actions
+              .map((a) => `- source: ${a.source_text} | system defined: ${a.defined}`)
+              .join("\n")}`;
+          })
+          .join("\n\n")}
+
+        Here is the response that the agent gave:
+        ${response}
+      `);
+
+      if (this.verbose) {
+        console.info("Decision:", decision?.decision);
+        console.info("Reason:", decision?.reason);
+      }
+
+      return decision?.decision ?? false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
   public async userMessage({
     messages,
     primaryChannel,
@@ -195,20 +205,18 @@ export class Pipeline {
       if (!this.assistant?.Model()) {
         return false;
       }
-      const discreteActions = await this.getDiscreteActions(
-        messages[messages.length - 1].content
-      );
+      const discreteActions = await this.getDiscreteActions(messages[messages.length - 1].content);
 
       if (!discreteActions) {
         return false;
       }
 
       if (this.verbose) {
-        console.info("Discrete actions:");
-        console.info(discreteActions);
+        console.info("Discrete actions:", discreteActions);
         primaryChannel.sendMessageAsAssistant(
           {
             content: "Picked discrete actions.",
+            type: "log",
           },
           conversationId
         );
@@ -217,6 +225,7 @@ export class Pipeline {
             content: format(JSON.stringify(discreteActions, null, 2), {
               parser: "json",
             }),
+            type: "log",
           },
           conversationId
         );
@@ -230,12 +239,74 @@ export class Pipeline {
         return false;
       }
 
-      primaryChannel.sendMessageAsAssistant(
-        {
-          content: response,
-        },
-        conversationId
-      );
+      if (this.verbose) {
+        console.info("Response:", response);
+        primaryChannel.sendMessageAsAssistant(
+          {
+            content: `Picked response: ${response}`,
+            type: "log",
+          },
+          conversationId
+        );
+      }
+
+      const actionIsComplete = await this.actionIsCompleteByMessage({
+        response,
+        actions: discreteActions,
+      });
+
+      if (this.verbose) {
+        console.info("Action is complete:", actionIsComplete);
+
+        primaryChannel.sendMessageAsAssistant(
+          {
+            content: `Action is complete: ${actionIsComplete}`,
+            type: "log",
+          },
+          conversationId
+        );
+      }
+
+      if (actionIsComplete) {
+        if (this.verbose) {
+          console.info("Marking action complete.");
+          primaryChannel.sendMessageAsAssistant(
+            {
+              content: "Marking action completed.",
+              type: "log",
+            },
+            conversationId
+          );
+        }
+
+        primaryChannel.sendMessageAsAssistant(
+          {
+            content: response,
+          },
+          conversationId
+        );
+        return true;
+      }
+
+      // TODO: Complete the action since it's not done yet
+      discreteActions.groups.forEach(async (group) => {
+        const agent = await this.Assistant()
+          ?.AgentManager()
+          ?.dispatchAgentForActionGroup(group, primaryChannel, conversationId);
+
+        if (this.verbose) {
+          console.info("Dispatched agent for action group: ", group.name, agent?.Name());
+          primaryChannel.sendMessageAsAssistant(
+            {
+              content: `Dispatched agent for action group: ${
+                group.name
+              }, with name: "${agent?.Name()}"`,
+              type: "log",
+            },
+            conversationId
+          );
+        }
+      });
 
       return true;
     } catch (error) {
@@ -244,12 +315,9 @@ export class Pipeline {
     }
   }
 
-  public async userMessageToAgent({
-    messages,
-  }: {
-    messages: GlobalChannelMessage[];
-  }) {
+  public async userMessageToAgent({ messages }: { messages: GlobalChannelMessage[] }) {
     try {
+      console.log("Handling user message directly to agent.");
       if (!this.assistant?.Model()) {
         throw new Error("No model found.");
       }

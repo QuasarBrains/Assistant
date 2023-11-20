@@ -1,6 +1,6 @@
 import { AgentManager } from ".";
 import Assistant, { Channel, Service } from "..";
-import { Module } from "../../types/main";
+import { DiscreteActionGroup, DiscreteActionsGrouped, Module } from "../../types/main";
 import { ChatModel } from "../llm";
 import { PlanOfAction } from "./planofaction";
 import { randomBytes } from "crypto";
@@ -8,19 +8,18 @@ import { GlobalChannelMessage } from "../../types/main";
 import { Pipeline } from "../pipeline";
 import AgentService from "./services/agentService";
 
-export interface AssistantOptions {
+export interface AgentOptions {
   name: string;
   model: ChatModel;
-  planOfAction: PlanOfAction;
   primaryChannel: Channel;
   primaryConversationId: string;
+  actionGroup: DiscreteActionGroup;
   verbose?: boolean;
 }
 
 export class Agent {
   private name: string;
   private model: ChatModel;
-  private planOfAction: PlanOfAction;
   private manager: AgentManager | undefined;
   private primaryChannel: Channel;
   private primaryConversationId: string;
@@ -28,21 +27,22 @@ export class Agent {
   private agentContext: { [key: string]: string } = {};
   private pipeline: Pipeline;
   private agentService: Service;
+  private actionGroup: DiscreteActionGroup;
 
   constructor({
     name,
     model,
-    planOfAction,
     primaryChannel,
     primaryConversationId,
     verbose,
-  }: AssistantOptions) {
+    actionGroup,
+  }: AgentOptions) {
     this.name = name;
     this.model = model;
-    this.planOfAction = planOfAction;
     this.primaryChannel = primaryChannel;
     this.primaryConversationId = primaryConversationId;
     this.verbose = verbose ?? false;
+    this.actionGroup = actionGroup;
     this.pipeline = new Pipeline({
       assistant: this.manager?.Assistant() as Assistant,
       verbose: this.verbose,
@@ -72,10 +72,7 @@ export class Agent {
   }
 
   public getAgentConversationHistory() {
-    const history = this.primaryChannel.getAgentHistory(
-      this.Name(),
-      this.primaryConversationId
-    );
+    const history = this.primaryChannel.getAgentHistory(this.Name(), this.primaryConversationId);
     return history;
   }
 
@@ -84,8 +81,7 @@ export class Agent {
   }
 
   public modulesAvailable(): Module[] {
-    const services =
-      this.manager?.Assistant()?.ServiceManager().getServiceList() ?? [];
+    const services = this.manager?.Assistant()?.ServiceManager().getServiceList() ?? [];
     const channels =
       this.manager
         ?.Assistant()
@@ -171,7 +167,7 @@ export class Agent {
         messages,
       });
 
-      return pipelineResponse;
+      return !!pipelineResponse;
     } catch (error) {
       console.error(error);
       return false;
@@ -184,7 +180,7 @@ export class Agent {
         `Hello! I'm ${this.FormattedAgentName()}!
         
         I have been initialized to complete the following task:
-        "${this.planOfAction.Title()}"
+        "${this.actionGroup.name}"
         `
       );
       return true;
