@@ -1,8 +1,7 @@
 import { AgentManager } from ".";
 import Assistant, { Channel, Service } from "..";
-import { DiscreteActionGroup, DiscreteActionsGrouped, Module } from "../../types/main";
+import { DiscreteActionGroup, Module } from "../../types/main";
 import { ChatModel } from "../llm";
-import { PlanOfAction } from "./planofaction";
 import { randomBytes } from "crypto";
 import { GlobalChannelMessage } from "../../types/main";
 import { Pipeline } from "../pipeline";
@@ -127,6 +126,7 @@ export class Agent {
 
   public start() {
     this.sendGreetingMessage();
+    this.startActionStepper();
   }
 
   public async sendPrimaryChannelMessage(message: string) {
@@ -208,6 +208,19 @@ export class Agent {
       const response = await this.model.getChatResponse({ messages: history });
       this.sendPrimaryChannelMessage(response.content);
       return false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  public async startActionStepper() {
+    try {
+      if (!this.actionGroup) {
+        console.error("No action group.");
+        return false;
+      }
+      console.log("Starting with action stepper for action group: ", this.actionGroup);
     } catch (error) {
       console.error(error);
       return false;
