@@ -27,7 +27,9 @@ export class Agent {
   private actionGroup: DiscreteActionGroup;
   private currentAction: number = 0;
   private userMessages: GlobalChannelMessage[] = [];
+  private actionHistory: string[] = [];
   private paused: boolean = false;
+  private done: boolean = false;
 
   constructor({
     name,
@@ -104,35 +106,6 @@ export class Agent {
         description: this.agentService.Description(),
         schema: this.agentService.Schema(),
       },
-      {
-        name: "add_to_context",
-        type: "other",
-        description: "Add a value to the agent's context.",
-        schema: {
-          methods: [
-            {
-              name: "add_to_context",
-              description: "Add a value to the agent's context.",
-              parameters: {
-                type: "object",
-                properties: {
-                  key: {
-                    type: "string",
-                  },
-                  value: {
-                    type: "string",
-                  },
-                },
-                required: ["key", "value"],
-              },
-              performAction: (params: { key: string; value: string }) => {
-                this.addToContext(params.key, params.value);
-                return true;
-              },
-            },
-          ],
-        },
-      },
     ];
 
     return [...services, ...channels, ...others];
@@ -192,11 +165,10 @@ export class Agent {
   public async sendGreetingMessage() {
     try {
       await this.sendPrimaryChannelMessage(
-        `Hello! I'm ${this.FormattedAgentName()}!
-        
-        I have been initialized to complete the following task:
+        `${this.FormattedAgentName()} has been initialized to complete the following task:
         "${JSON.stringify(this.actionGroup)}"
-        `
+        `,
+        "log"
       );
       return true;
     } catch (error) {
@@ -217,7 +189,21 @@ export class Agent {
     return str;
   }
 
-  public async agentProcess() {
+  public finish() {
+    this.done = true;
+    if (this.verbose) {
+      this.sendPrimaryChannelMessage(
+        `${this.FormattedAgentName()} has finished.`,
+        "log"
+      );
+      this.sendPrimaryChannelMessage(
+        `Action history:\n${this.actionHistory.join("\n")}`,
+        "log"
+      );
+    }
+  }
+
+  public async agentProcess(): Promise<boolean> {
     try {
       if (!this.actionGroup) {
         console.error("No action group.");
@@ -225,7 +211,16 @@ export class Agent {
       }
 
       if (this.paused) {
-        return;
+        return false;
+      }
+
+      if (this.done) {
+        return true;
+      }
+
+      if (this.currentAction >= this.actionGroup.actions.length) {
+        this.finish();
+        return true;
       }
 
       const unreadMessages = this.userMessages;
@@ -255,8 +250,20 @@ export class Agent {
       }
 
       const { performAction, arguments: args, name } = response;
+      const parsedArgs = { ...JSON.parse(args), agent: this.Name() };
 
-      const output = await performAction(args);
+      if (name === "usePrimaryChannel") {
+        const message = parsedArgs.message;
+        this.sendPrimaryChannelMessage(message);
+        this.currentAction += 1;
+        return this.agentProcess();
+      }
+
+      const output = await performAction(parsedArgs);
+      this.actionHistory.push(
+        `For action "${action.defined}": Performed action "${name}" with arguments: ${args}`
+      );
+      this.addToContext(`${name}_${action.defined}`, output);
 
       if (this.verbose) {
         this.sendPrimaryChannelMessage(
@@ -269,7 +276,7 @@ export class Agent {
 
       this.currentAction += 1;
 
-      this.agentProcess();
+      return this.agentProcess();
     } catch (error) {
       console.error(error);
       return false;

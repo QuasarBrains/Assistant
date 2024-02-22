@@ -24,7 +24,7 @@ export class OpenAIChatModel extends ChatModel<Tool> {
   private agentModel: AllowedOpenAIChatModels;
   private planningModel: string;
   public static readonly DEFAULT_AGENT_MODEL = "gpt-4";
-  public static readonly DEFAULT_PLANNING_MODEL = "gpt-3.5-turbo";
+  public static readonly DEFAULT_PLANNING_MODEL = "gpt-4";
 
   constructor({ apiKey, agentModel, planningModel }: OpenAIOptions) {
     super();
@@ -249,36 +249,43 @@ export class OpenAIChatModel extends ChatModel<Tool> {
             `,
           },
         ],
-        functions: [
+        tools: [
           {
-            name: "give_selection_decision",
-            description:
-              "Returns a decision object based on a selection input.",
-            parameters: {
-              type: "object",
-              properties: {
-                decision: {
-                  anyOf: [
-                    {
-                      type: "number",
-                    },
-                    {
-                      type: "string",
-                    },
-                  ],
-                  description: "The value corresponding to the correct option.",
+            type: "function",
+            function: {
+              name: "give_selection_decision",
+              description:
+                "Returns a decision object based on a selection input.",
+              parameters: {
+                type: "object",
+                properties: {
+                  decision: {
+                    anyOf: [
+                      {
+                        type: "number",
+                      },
+                      {
+                        type: "string",
+                      },
+                    ],
+                    description:
+                      "The value corresponding to the correct option.",
+                  },
+                  reason: {
+                    type: "string",
+                    description: "The reason for the decision.",
+                  },
                 },
-                reason: {
-                  type: "string",
-                  description: "The reason for the decision.",
-                },
+                required: ["decision", "reason"],
               },
-              required: ["decision", "reason"],
             },
           },
         ],
-        function_call: {
-          name: "give_selection_decision",
+        tool_choice: {
+          type: "function",
+          function: {
+            name: "give_selection_decision",
+          },
         },
       });
 
@@ -286,13 +293,15 @@ export class OpenAIChatModel extends ChatModel<Tool> {
         return undefined;
       }
 
-      const decisionFunctionCall = response.choices[0].message?.function_call;
+      const tc = response.choices[0].message?.tool_calls?.[0];
 
-      if (!decisionFunctionCall) {
+      if (!tc) {
         return undefined;
       }
 
-      const { arguments: args } = decisionFunctionCall;
+      const {
+        function: { arguments: args },
+      } = tc;
 
       if (!args) {
         return undefined;
@@ -313,17 +322,28 @@ export class OpenAIChatModel extends ChatModel<Tool> {
   public async getDiscreteActions(
     prompt: string
   ): Promise<DiscreteActionsGrouped | undefined> {
-    //              You are tasked with extracting discrete actions from the given prompt.
-    // A discrete action is the smallest unit of action in a task.
-    // A group is a set of dependent actions that should be taken together and in order.
     try {
       const response = await this.client.chat.completions.create({
         model: this.PlanningModel(),
         messages: [
           {
             role: "system",
-            content:
-              "You are a decision maker. Based on the given prompt, you will output a list of discrete actions.",
+            content: `
+            # Purpose
+            You are a discrete action extractor, and your role is to take user input and transform it into a structured format.
+
+            # Context
+            A group is an ordered set of discrete actions, which upon completion will fulfill a request.
+            A discrete action is the smallest indivisible unit of action within a group.
+            Even if the user input does not contain an explicit request, you should still define an action to be performed in response.
+            Think of groups as being sets of dependent actions, so independent actions should be in different groups.
+            Each group will be given to an individual agent for completion, so only define as many groups as agents which should be dispatched.
+
+            # Rules
+            - Be conservative in the number of groups you define, but always define as many as necessary.
+            - Define as many actions per group as necessary to fully complete the request.
+            - Do not take initiative, only extract actions directly in the prompt.
+            `,
           },
           {
             role: "user",
@@ -333,37 +353,53 @@ export class OpenAIChatModel extends ChatModel<Tool> {
         tool_choice: {
           type: "function",
           function: {
-            name: "extract_discrete_actions",
+            name: "extractDiscreteActions",
           },
         },
-        // ! MAKE SURE THIS SCHEMA IS VALID
         tools: [
           {
             type: "function",
             function: {
-              name: "extract_discrete_actions",
+              name: "extractDiscreteActions",
               parameters: {
                 type: "object",
-                groups: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: {
-                        type: "string",
-                        description: "The name of the group of actions.",
-                      },
-                      actions: {
-                        type: "array",
-                        items: {
+                properties: {
+                  groups: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: {
                           type: "string",
-                          description: "The action to be performed.",
+                          description:
+                            "A name which describes the action group.",
+                        },
+                        actions: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            description: "The discrete action to be performed.",
+                            properties: {
+                              defined: {
+                                type: "string",
+                                description:
+                                  "The description of the discrete action.",
+                              },
+                              source_text: {
+                                type: "string",
+                                description:
+                                  "The part of the prompt that led to this action being described.",
+                              },
+                            },
+                          },
                         },
                       },
+                      required: ["name", "actions"],
                     },
+                    description: "The groups of actions to be performed.",
                   },
-                  description: "The groups of actions to be performed.",
                 },
+                required: ["groups"],
               },
             },
           },
@@ -375,8 +411,6 @@ export class OpenAIChatModel extends ChatModel<Tool> {
       }
 
       const tc = response.choices[0].message.tool_calls?.[0];
-
-      console.log("Tool call: ", tc);
 
       if (!tc) {
         return undefined;
@@ -391,7 +425,6 @@ export class OpenAIChatModel extends ChatModel<Tool> {
       }
 
       const parsedArgs = JSON.parse(args);
-      console.log("Parsed args: ", parsedArgs);
       return parsedArgs as DiscreteActionsGrouped;
     } catch (error) {
       console.error(error);
@@ -412,7 +445,10 @@ export class OpenAIChatModel extends ChatModel<Tool> {
             role: "system",
             content: `
             Given a description of an action to take, you should select the best tool to perform the action.
-            If no tool is suitable for the action, you should output a message to the user indicating that no tool is suitable.
+            If no tool is suitable for the action, use a channel to notify the user.
+
+            RULES:
+            - Always use tools
             `,
           },
           {
@@ -438,8 +474,29 @@ export class OpenAIChatModel extends ChatModel<Tool> {
       }
 
       const tc = response.choices[0].message.tool_calls?.[0];
+      const message = response.choices[0].message.content;
 
       if (!tc) {
+        if (message) {
+          return {
+            name: "usePrimaryChannel",
+            description: "Notify the user using the primary channel.",
+            arguments: JSON.stringify({
+              message,
+            }),
+            parameters: {
+              type: "object",
+              properties: {
+                message: {
+                  type: "string",
+                  description: "The message to send to the user.",
+                },
+              },
+              required: ["message"],
+            },
+            performAction: () => {},
+          } satisfies ModuleMethod & { arguments: string };
+        }
         return undefined;
       }
 

@@ -10,7 +10,14 @@ export type GlobalChannelMessage = {
 export interface ModuleMethod {
   name: string;
   description: string;
-  parameters: JSONSchema;
+  parameters: {
+    type: "object";
+    properties: {
+      [key: string]: JSONSchema;
+    };
+    required: string[];
+  };
+  // eslint-disable-next-line no-unused-vars
   performAction: (params: any) => any;
 }
 

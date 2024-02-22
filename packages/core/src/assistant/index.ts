@@ -79,6 +79,10 @@ export default class Assistant {
     return this.name;
   }
 
+  public Verbosity(): boolean {
+    return this.verbose;
+  }
+
   public ChannelManager(): ChannelManager {
     return this.channelManager;
   }

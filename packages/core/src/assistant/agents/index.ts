@@ -1,4 +1,3 @@
-import { unzip } from "zlib";
 import Assistant from "..";
 import { DiscreteActionGroup, GlobalChannelMessage } from "../../types/main";
 import { Agent } from "./agent";
@@ -14,10 +13,12 @@ export class AgentManager {
     [key: string]: Agent;
   } = {};
   private assistant: Assistant | undefined;
+  private verbose: boolean = false;
 
   constructor({ assistant }: AgentManagerOptions) {
     this.agents = {};
     this.assistant = assistant;
+    this.verbose = assistant.Verbosity();
   }
 
   public Assistant(): Assistant | undefined {
@@ -104,6 +105,7 @@ export class AgentManager {
         primaryChannel,
         actionGroup,
         primaryConversationId,
+        verbose: this.verbose,
       });
 
       this.registerAgent(agent);
