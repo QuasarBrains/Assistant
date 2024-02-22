@@ -20,35 +20,77 @@ There are many projects such as [AutoGPT](https://github.com/Significant-Gravita
 
 An assistant does not have a goal, it has a purpose. It does not have a discrete set of steps in order to fulfill its purpose, but rather must exist in perpetuity, ready to recieve orders, or take initiative, in order to fulfill it. This is the key difference between an agent and an assistant, and why I'm creating this project. An assistant will be capable of dispatching agents, however, the agents ultimately only exist to fulfill one task, hence their "agency". The assistant exists to continuously provide service to the user.
 
-## Example Usage
+## Creating an Assistant
 
 ---
 
-> **Note**:
+> [!note]
 > Code seen here is subject to change as the project progresses towards 1.0.0, some things here may not work as expected. If you have questions please [reach out](mailto:aidantilgner02@gmail.com) to me directly or [leave an issue](https://github.com/QuasarBrains/Assistant/issues/new)!
 
 ---
 
-Install
+Install with your package manager of choice, here we'll use npm:
 
 ```bash
 npm install @quasarbrains/assistant
 ```
 
-Usage
+You can see a more concrete example in the [Test Server](https://github.com/QuasarBrains/Assistant/blob/master/apps/test-server/src/index.ts), but here's a simple demonstration of usage:
 
 ```ts
 import Assistant from "@quasarbrains/assistant";
 
-// Initialize an OpenAI-based Assistant
+// * Initialize an OpenAI-based Assistant
 const assistant = new Assistant({
   name: "Onyx",
   model: new Assistant.ChatModels.OpenAI({
-    apiKey: OPENAI_API_KEY, // ! YOUR OPENAI API KEY
+    apiKey: OPENAI_API_KEY, // ! REPLACE WITH YOUR OPENAI API KEY
     agentModel: "gpt-4",
-    planningModel: "gpt-3.5-turbo",
+    planningModel: "gpt-4",
   }),
   datastoreDirectory: path.join(__dirname, "datastore"),
-  verbose: false,
+  verbose: false, // set to true for additional logging
 });
+
+// * Declare a service and register it, you can register many services
+export class FileService extends Assistant.Service {
+  constructor() {
+    super({
+      name: "file-service",
+      description: "Performs file operations using node's FS module",
+      schema: {
+        methods: [
+          {
+            name: "readFileAsString",
+            description: "read a file and get a string as a response",
+            parameters: {
+              type: "object",
+              properties: {
+                path: {
+                  type: "string",
+                  description: "The path to the file that should be read",
+                },
+              },
+              required: ["path"],
+            },
+            performAction: (params: { path: string }) => {
+              return this.readFileAsString(params);
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  public readFileAsString({ path }: { path: string }) {
+    const file = this.readFile({ path });
+    const asString = file.toString();
+    return asString;
+  }
+}
+
+// * Now you'll need to register the service, so that the assistant has access to them
+assistant.ServiceManager().registerServices([new FileService()]);
 ```
+
+This is a demo of creating an assistant, but doesn't include concepts like `Channels` yet. As mentioned above, you can find a more concrete working example in the [Test Server](https://github.com/QuasarBrains/Assistant/blob/master/apps/test-server/src/index.ts).
