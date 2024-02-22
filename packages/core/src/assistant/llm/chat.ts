@@ -1,9 +1,17 @@
-import { Configuration, OpenAIApi, ResponseTypes, CreateChatCompletionRequest } from "openai-edge";
+import OpenAI from "openai";
 import { ChatModel } from ".";
-import { GlobalChannelMessage } from "../../types/main";
-import Assistant from "..";
+import {
+  DiscreteActionDerivedFromMessage,
+  DiscreteActionsGrouped,
+  GlobalChannelMessage,
+  Module,
+  ModuleMethod,
+} from "../../types/main";
 
-export type AllowedOpenAIChatModels = CreateChatCompletionRequest["model"];
+export type AllowedOpenAIChatModels =
+  OpenAI.ChatCompletionCreateParams["model"];
+
+export type Tool = OpenAI.ChatCompletionTool & { method: ModuleMethod };
 
 export interface OpenAIOptions {
   apiKey: string;
@@ -11,26 +19,21 @@ export interface OpenAIOptions {
   planningModel?: AllowedOpenAIChatModels;
 }
 
-export class OpenAIChatModel extends ChatModel {
-  private configuration: Configuration;
+export class OpenAIChatModel extends ChatModel<Tool> {
+  private client: OpenAI;
   private agentModel: AllowedOpenAIChatModels;
   private planningModel: string;
-  private api: OpenAIApi;
   public static readonly DEFAULT_AGENT_MODEL = "gpt-4";
   public static readonly DEFAULT_PLANNING_MODEL = "gpt-3.5-turbo";
 
   constructor({ apiKey, agentModel, planningModel }: OpenAIOptions) {
     super();
     this.agentModel = agentModel || OpenAIChatModel.DEFAULT_AGENT_MODEL;
-    this.planningModel = planningModel || OpenAIChatModel.DEFAULT_PLANNING_MODEL;
-    this.configuration = new Configuration({
+    this.planningModel =
+      planningModel || OpenAIChatModel.DEFAULT_PLANNING_MODEL;
+    this.client = new OpenAI({
       apiKey,
     });
-    this.api = new OpenAIApi(this.configuration);
-  }
-
-  public getAPI(): OpenAIApi {
-    return this.api;
   }
 
   public AgentModel() {
@@ -45,6 +48,27 @@ export class OpenAIChatModel extends ChatModel {
     return messages.map((m) => ({ content: m.content, role: m.role }));
   }
 
+  public modulesToTools(modules: Module[]): Tool[] {
+    const tools: Tool[] = [];
+
+    modules.forEach((m) => {
+      m.schema.methods.forEach((method) => {
+        tools.push({
+          type: "function",
+          function: {
+            name: method.name,
+            description: method.description,
+            parameters:
+              method.parameters as OpenAI.ChatCompletionTool["function"]["parameters"],
+          },
+          method,
+        });
+      });
+    });
+
+    return tools;
+  }
+
   public async getChatResponseSimple({
     message,
     system_prompt,
@@ -53,7 +77,7 @@ export class OpenAIChatModel extends ChatModel {
     system_prompt: string;
   }): Promise<string> {
     try {
-      const response = await this.api.createChatCompletion({
+      const response = await this.client.chat.completions.create({
         model: this.agentModel,
         messages: [
           {
@@ -67,9 +91,7 @@ export class OpenAIChatModel extends ChatModel {
         ],
       });
 
-      const result = (await response.json()) as ResponseTypes["createChatCompletion"];
-
-      const content = result.choices[0].message?.content;
+      const content = response.choices[0].message?.content;
 
       if (!content) {
         return "An error occured.";
@@ -88,14 +110,12 @@ export class OpenAIChatModel extends ChatModel {
     messages: GlobalChannelMessage[];
   }): Promise<GlobalChannelMessage> {
     try {
-      const response = await this.api.createChatCompletion({
+      const response = await this.client.chat.completions.create({
         model: this.agentModel,
         messages: this.getCleanedMessages(messages),
       });
 
-      const result = (await response.json()) as ResponseTypes["createChatCompletion"];
-
-      const content = result.choices[0].message?.content;
+      const content = response.choices[0].message?.content;
 
       if (!content) {
         return {
@@ -117,140 +137,11 @@ export class OpenAIChatModel extends ChatModel {
     }
   }
 
-  public async createChatCompletion(req: CreateChatCompletionRequest) {
-    try {
-      const res = await this.api.createChatCompletion(req);
-
-      const data = (await res.json()) as ResponseTypes["createChatCompletion"];
-
-      return data;
-    } catch (error) {
-      console.error(error);
-      return undefined;
-    }
-  }
-
-  public async generatePlanOfAction(messages: GlobalChannelMessage[]) {
-    try {
-      const response = await this.createChatCompletion({
-        model: this.PlanningModel(),
-        messages: [
-          {
-            role: "system",
-            content: `
-            📄⚙️Umsg+ctx=🗒️💡,💼⮕POA. 🚀Action-based roadmap, not detailed guide, code mention⬜️goal-linked. Ex1: 📧John, 🚫🤝Thurs. ➡️POA: Perform: 📧John, explain abs. 💠1: Perform: Find JD's 📧 💠2: Perform: Understand Thurs. meet. purpose 💠3: Perform: Uncover user abs. reason 💠4: Perform: 📧John, explain abs. 💠5: Check: 📧success? 💠6: Verify: User, 📧 sent? Ex2: ℹ️TypeScript? ➡️POA: ℹ️Inform User on TS 💠1: Perform: 🌐🔍TS 💠2: Select: Top3 🌐 💠3: Compose: Summary of top3 💠4: Create: 💡reply to user 💠5: Execute: Send reply. 🅱️POA⚙️📄💡, short+human clear, no Req./Opt. labels. REQUIRED=🔒, OPTIONAL=🔓. POA➡️Agent performs tasks. Balanced steps, order matters! K.I.S.S. No msg parse.
-            `,
-          },
-          {
-            role: "user",
-            content: `
-            Here is the conversation history, pay the most attention to the last message from the user:
-            ${messages
-              .map((message) => {
-                return `- ${message.role.toUpperCase()}: ${message.content}`;
-              })
-              .join("\n")}
-            `,
-          },
-        ],
-        functions: [
-          {
-            name: "generate_plan_of_action",
-            description: "Generates a plan of action given a series of high-level steps.",
-            parameters: {
-              type: "object",
-              properties: {
-                title: {
-                  type: "string",
-                  description: "The title of the plan of action.",
-                },
-                steps: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      description: {
-                        type: "string",
-                        description: "A description of the step.",
-                      },
-                      required: {
-                        type: "boolean",
-                        description: "Whether or not the step is required.",
-                      },
-                    },
-                  },
-                },
-              },
-              required: ["title", "steps"],
-            },
-          },
-        ],
-        function_call: {
-          name: "generate_plan_of_action",
-        },
-      });
-
-      if (!response) {
-        return undefined;
-      }
-
-      const planOfActionFunctionCall = response.choices[0].message?.function_call;
-
-      if (!planOfActionFunctionCall) {
-        return undefined;
-      }
-
-      const { arguments: args } = planOfActionFunctionCall;
-
-      if (!args) {
-        return undefined;
-      }
-
-      const parsedArgs = JSON.parse(args);
-
-      const planOfAction = new Assistant.PlanOfAction({
-        title: parsedArgs.title,
-        steps: parsedArgs.steps,
-        sourceMessages: messages,
-        assistant: this.Assistant(),
-      });
-
-      return planOfAction;
-    } catch (error) {
-      console.error(error);
-      return undefined;
-    }
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  public async generateDummyPlanOfAction(messages: GlobalChannelMessage[]) {
-    try {
-      const planOfAction = new Assistant.PlanOfAction({
-        title: "Respond to the User's Greeting",
-        steps: [
-          {
-            description: "Send a greeting message to the user.",
-            required: true,
-            retries: 0,
-          },
-        ],
-        sourceMessages: messages,
-        assistant: this.Assistant(),
-      });
-
-      return planOfAction;
-    } catch (error) {
-      console.error(error);
-      return undefined;
-    }
-  }
-
   public async makeBooleanDecision(
     decisionDescription: string
   ): Promise<{ decision: boolean; reason: string } | undefined> {
     try {
-      console.log("Making boolean decision for description: ", decisionDescription);
-      const response = await this.createChatCompletion({
+      const response = await this.client.chat.completions.create({
         model: this.PlanningModel(),
         messages: [
           {
@@ -267,28 +158,33 @@ export class OpenAIChatModel extends ChatModel {
             `,
           },
         ],
-        functions: [
+        tools: [
           {
-            name: "give_boolean_decision",
-            description: "Returns a decision object based on a boolean input.",
-            parameters: {
-              type: "object",
-              properties: {
-                decision: {
-                  type: "boolean",
-                  description: "The boolean yes or no decision.",
+            type: "function",
+            function: {
+              name: "boolean_decision",
+              parameters: {
+                type: "object",
+                properties: {
+                  decision: {
+                    type: "boolean",
+                    description: "The boolean yes or no decision.",
+                  },
+                  reason: {
+                    type: "string",
+                    description: "The reason for the decision.",
+                  },
                 },
-                reason: {
-                  type: "string",
-                  description: "The reason for the decision.",
-                },
+                required: ["decision", "reason"],
               },
-              required: ["boolean", "reason"],
             },
           },
         ],
-        function_call: {
-          name: "give_boolean_decision",
+        tool_choice: {
+          type: "function",
+          function: {
+            name: "boolean_decision",
+          },
         },
       });
 
@@ -296,13 +192,15 @@ export class OpenAIChatModel extends ChatModel {
         return undefined;
       }
 
-      const decisionFunctionCall = response.choices[0].message?.function_call;
+      const tc = response.choices[0].message.tool_calls?.[0];
 
-      if (!decisionFunctionCall) {
+      if (!tc) {
         return undefined;
       }
 
-      const { arguments: args } = decisionFunctionCall;
+      const {
+        function: { arguments: args },
+      } = tc;
 
       if (!args) {
         return undefined;
@@ -325,7 +223,7 @@ export class OpenAIChatModel extends ChatModel {
     options: { label: string; value: T }[]
   ): Promise<{ decision: T; reason: string } | undefined> {
     try {
-      const response = await this.createChatCompletion({
+      const response = await this.client.chat.completions.create({
         model: this.PlanningModel(),
         messages: [
           {
@@ -354,7 +252,8 @@ export class OpenAIChatModel extends ChatModel {
         functions: [
           {
             name: "give_selection_decision",
-            description: "Returns a decision object based on a selection input.",
+            description:
+              "Returns a decision object based on a selection input.",
             parameters: {
               type: "object",
               properties: {
@@ -404,6 +303,165 @@ export class OpenAIChatModel extends ChatModel {
       return parsedArgs as {
         decision: T;
         reason: string;
+      };
+    } catch (error) {
+      console.error(error);
+      return undefined;
+    }
+  }
+
+  public async getDiscreteActions(
+    prompt: string
+  ): Promise<DiscreteActionsGrouped | undefined> {
+    //              You are tasked with extracting discrete actions from the given prompt.
+    // A discrete action is the smallest unit of action in a task.
+    // A group is a set of dependent actions that should be taken together and in order.
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.PlanningModel(),
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a decision maker. Based on the given prompt, you will output a list of discrete actions.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        tool_choice: {
+          type: "function",
+          function: {
+            name: "extract_discrete_actions",
+          },
+        },
+        // ! MAKE SURE THIS SCHEMA IS VALID
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_discrete_actions",
+              parameters: {
+                type: "object",
+                groups: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: {
+                        type: "string",
+                        description: "The name of the group of actions.",
+                      },
+                      actions: {
+                        type: "array",
+                        items: {
+                          type: "string",
+                          description: "The action to be performed.",
+                        },
+                      },
+                    },
+                  },
+                  description: "The groups of actions to be performed.",
+                },
+              },
+            },
+          },
+        ],
+      });
+
+      if (!response) {
+        return undefined;
+      }
+
+      const tc = response.choices[0].message.tool_calls?.[0];
+
+      console.log("Tool call: ", tc);
+
+      if (!tc) {
+        return undefined;
+      }
+
+      const {
+        function: { arguments: args },
+      } = tc;
+
+      if (!args) {
+        return undefined;
+      }
+
+      const parsedArgs = JSON.parse(args);
+      console.log("Parsed args: ", parsedArgs);
+      return parsedArgs as DiscreteActionsGrouped;
+    } catch (error) {
+      console.error(error);
+      return undefined;
+    }
+  }
+
+  public async getActionToPerformForDiscreteAction(
+    discreteAction: DiscreteActionDerivedFromMessage,
+    tools: Tool[],
+    additionalInfo: string
+  ): Promise<(ModuleMethod & { arguments: string }) | undefined> {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.PlanningModel(),
+        messages: [
+          {
+            role: "system",
+            content: `
+            Given a description of an action to take, you should select the best tool to perform the action.
+            If no tool is suitable for the action, you should output a message to the user indicating that no tool is suitable.
+            `,
+          },
+          {
+            role: "user",
+            content: `
+            Here is the discrete action to be performed:
+            ${discreteAction.defined}
+            `,
+          },
+          {
+            role: "user",
+            content: `
+            Here is some additional information to help you complete the task:
+            ${additionalInfo}
+            `,
+          },
+        ],
+        tools,
+      });
+
+      if (!response) {
+        return undefined;
+      }
+
+      const tc = response.choices[0].message.tool_calls?.[0];
+
+      if (!tc) {
+        return undefined;
+      }
+
+      const {
+        function: { arguments: args, name },
+      } = tc;
+
+      if (!args || !name) {
+        return undefined;
+      }
+
+      const foundMethod = tools.find((t) => t.function.name === name);
+
+      if (!foundMethod) {
+        return undefined;
+      }
+
+      const parsedArgs = JSON.parse(args);
+
+      return {
+        ...foundMethod.method,
+        arguments: JSON.stringify(parsedArgs),
       };
     } catch (error) {
       console.error(error);

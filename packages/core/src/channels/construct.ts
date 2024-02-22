@@ -13,7 +13,10 @@ export interface ChannelOptions {
   }) => void;
   addToHistory: (history: Record<string, GlobalChannelMessage[]>) => void;
   getFullHistory: () => Record<string, GlobalChannelMessage[]>;
-  getConversationHistory: (conversation_id: string, count?: number) => GlobalChannelMessage[];
+  getConversationHistory: (
+    conversation_id: string,
+    count?: number
+  ) => GlobalChannelMessage[];
 }
 
 export class Channel {
@@ -22,11 +25,17 @@ export class Channel {
   private messageListeners: Array<
     (
       message: GlobalChannelMessage,
-      sendMessage: (message: GlobalChannelMessage, conversation_id: string) => void
+      sendMessage: (
+        message: GlobalChannelMessage,
+        conversation_id: string
+      ) => void
     ) => void
   > = [];
   private manager: ChannelManager | undefined;
-  private sendMessage: (message: GlobalChannelMessage, conversation_id: string) => void;
+  private sendMessage: (
+    message: GlobalChannelMessage,
+    conversation_id: string
+  ) => void;
   public init: () => void;
   public defineConversationHistory: (history: {
     conversation_id: string;
@@ -88,7 +97,10 @@ export class Channel {
             },
             required: ["conversation_id"],
           },
-          performAction: (params: { conversation_id: string; count?: number }) =>
+          performAction: (params: {
+            conversation_id: string;
+            count?: number;
+          }) =>
             this.getConversationHistory(params.conversation_id, params.count),
         },
         {
@@ -150,7 +162,9 @@ export class Channel {
       messages: [...this.getConversationHistory(conversation_id), message],
     });
     this.messageListeners.forEach((cb) =>
-      cb(message, (msg: GlobalChannelMessage) => this.sendMessage(msg, conversation_id))
+      cb(message, (msg: GlobalChannelMessage) =>
+        this.sendMessage(msg, conversation_id)
+      )
     );
   }
 
@@ -169,7 +183,10 @@ export class Channel {
   public addMessageListener(
     cb: (
       message: GlobalChannelMessage,
-      sendMessage: (message: GlobalChannelMessage, conversation_id: string) => void
+      sendMessage: (
+        message: GlobalChannelMessage,
+        conversation_id: string
+      ) => void
     ) => void
   ): void {
     this.messageListeners.push(cb);
@@ -207,7 +224,9 @@ export class Channel {
 
   public getAgentHistory(agentName: string, conversation_id: string) {
     const history = this.getConversationHistory(conversation_id);
-    const filteredHistory = history.filter((message) => message.agent === agentName);
+    const filteredHistory = history.filter(
+      (message) => message.agent === agentName
+    );
     return filteredHistory;
   }
 }

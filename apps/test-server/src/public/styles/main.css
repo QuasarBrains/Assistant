@@ -50,6 +50,7 @@
   background-color: var(--background-color);
 }
 #chat-history .log {
+  white-space: pre-wrap;
   padding-left: 14px;
   border-left: 2px solid var(--contrast);
 }

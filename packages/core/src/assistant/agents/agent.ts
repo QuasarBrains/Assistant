@@ -1,10 +1,9 @@
 import { AgentManager } from ".";
-import Assistant, { Channel, Service } from "..";
+import { Channel, Service } from "..";
 import { DiscreteActionGroup, Module } from "../../types/main";
 import { ChatModel } from "../llm";
 import { randomBytes } from "crypto";
 import { GlobalChannelMessage } from "../../types/main";
-import { Pipeline } from "../pipeline";
 import AgentService from "./services/agentService";
 
 export interface AgentOptions {
@@ -24,9 +23,11 @@ export class Agent {
   private primaryConversationId: string;
   private verbose: boolean;
   private agentContext: { [key: string]: string } = {};
-  private pipeline: Pipeline;
   private agentService: Service;
   private actionGroup: DiscreteActionGroup;
+  private currentAction: number = 0;
+  private userMessages: GlobalChannelMessage[] = [];
+  private paused: boolean = false;
 
   constructor({
     name,
@@ -42,12 +43,8 @@ export class Agent {
     this.primaryConversationId = primaryConversationId;
     this.verbose = verbose ?? false;
     this.actionGroup = actionGroup;
-    this.pipeline = new Pipeline({
-      assistant: this.manager?.Assistant() as Assistant,
-      verbose: this.verbose,
-      agent: this,
-    });
     this.agentService = new AgentService({ agent: this });
+    this.userMessages = [];
   }
 
   public static getRandomNewName() {
@@ -71,7 +68,10 @@ export class Agent {
   }
 
   public getAgentConversationHistory() {
-    const history = this.primaryChannel.getAgentHistory(this.Name(), this.primaryConversationId);
+    const history = this.primaryChannel.getAgentHistory(
+      this.Name(),
+      this.primaryConversationId
+    );
     return history;
   }
 
@@ -80,7 +80,8 @@ export class Agent {
   }
 
   public modulesAvailable(): Module[] {
-    const services = this.manager?.Assistant()?.ServiceManager().getServiceList() ?? [];
+    const services =
+      this.manager?.Assistant()?.ServiceManager().getServiceList() ?? [];
     const channels =
       this.manager
         ?.Assistant()
@@ -102,6 +103,35 @@ export class Agent {
         type: "service",
         description: this.agentService.Description(),
         schema: this.agentService.Schema(),
+      },
+      {
+        name: "add_to_context",
+        type: "other",
+        description: "Add a value to the agent's context.",
+        schema: {
+          methods: [
+            {
+              name: "add_to_context",
+              description: "Add a value to the agent's context.",
+              parameters: {
+                type: "object",
+                properties: {
+                  key: {
+                    type: "string",
+                  },
+                  value: {
+                    type: "string",
+                  },
+                },
+                required: ["key", "value"],
+              },
+              performAction: (params: { key: string; value: string }) => {
+                this.addToContext(params.key, params.value);
+                return true;
+              },
+            },
+          ],
+        },
       },
     ];
 
@@ -126,14 +156,18 @@ export class Agent {
 
   public start() {
     this.sendGreetingMessage();
-    this.startActionStepper();
+    this.agentProcess();
   }
 
-  public async sendPrimaryChannelMessage(message: string) {
+  public async sendPrimaryChannelMessage(
+    message: string,
+    type: GlobalChannelMessage["type"] = "text"
+  ) {
     try {
       await this.primaryChannel.sendMessageAsAssistant(
         {
           content: `${this.FormattedAgentName()}: ${message}`,
+          type,
         },
         this.primaryConversationId
       );
@@ -147,27 +181,8 @@ export class Agent {
   public async recieveMessage() {
     try {
       const history = this.getAgentConversationHistory();
-      const response = await this.startAgentResponse({
-        messages: history,
-      });
-      return response;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
 
-  public async startAgentResponse({
-    messages,
-  }: {
-    messages: GlobalChannelMessage[];
-  }): Promise<boolean> {
-    try {
-      const pipelineResponse = await this.pipeline.userMessageToAgent({
-        messages,
-      });
-
-      return !!pipelineResponse;
+      this.userMessages.push(history[history.length - 1]);
     } catch (error) {
       console.error(error);
       return false;
@@ -180,7 +195,7 @@ export class Agent {
         `Hello! I'm ${this.FormattedAgentName()}!
         
         I have been initialized to complete the following task:
-        "${this.actionGroup.name}"
+        "${JSON.stringify(this.actionGroup)}"
         `
       );
       return true;
@@ -202,25 +217,59 @@ export class Agent {
     return str;
   }
 
-  public async getConversationalResponse() {
-    try {
-      const history = this.getAgentConversationHistory();
-      const response = await this.model.getChatResponse({ messages: history });
-      this.sendPrimaryChannelMessage(response.content);
-      return false;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
-  public async startActionStepper() {
+  public async agentProcess() {
     try {
       if (!this.actionGroup) {
         console.error("No action group.");
         return false;
       }
-      console.log("Starting with action stepper for action group: ", this.actionGroup);
+
+      if (this.paused) {
+        return;
+      }
+
+      const unreadMessages = this.userMessages;
+      this.userMessages = [];
+
+      const action = this.actionGroup.actions[this.currentAction];
+
+      const perception = `
+      Here is some additional context for your reference:
+      ${this.getContextAsString()}
+      ---
+      Latest messages:
+      ${unreadMessages.map((m) => m.content).join("\n")}
+      `;
+
+      const tools = this.model.modulesToTools(this.modulesAvailable());
+
+      const response = await this.model.getActionToPerformForDiscreteAction(
+        action,
+        tools,
+        perception
+      );
+
+      if (!response) {
+        console.error("No response.");
+        return false;
+      }
+
+      const { performAction, arguments: args, name } = response;
+
+      const output = await performAction(args);
+
+      if (this.verbose) {
+        this.sendPrimaryChannelMessage(
+          `Performed action ${name} with arguments ${JSON.stringify(
+            args
+          )} and output: ${output}`,
+          "log"
+        );
+      }
+
+      this.currentAction += 1;
+
+      this.agentProcess();
     } catch (error) {
       console.error(error);
       return false;

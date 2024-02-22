@@ -48,7 +48,14 @@ export default class Assistant {
     OpenAI: OpenAIChatModel,
   };
 
-  constructor({ name, model, datastoreDirectory, description, log, verbose }: AssistantOptions) {
+  constructor({
+    name,
+    model,
+    datastoreDirectory,
+    description,
+    log,
+    verbose,
+  }: AssistantOptions) {
     this.name = name;
     this.model = model;
     this.datastoreDirectory = datastoreDirectory;
@@ -117,7 +124,10 @@ export default class Assistant {
     this.model.registerAssistant(this);
   }
 
-  public recordToDatastore(path: string, record: string | NodeJS.ArrayBufferView) {
+  public recordToDatastore(
+    path: string,
+    record: string | NodeJS.ArrayBufferView
+  ) {
     return writeFileSync(`${this.datastoreDirectory}/${path}`, record);
   }
 
@@ -134,7 +144,9 @@ export default class Assistant {
     }
   }
 
-  public async getChatResponse(messages: GlobalChannelMessage[]): Promise<GlobalChannelMessage> {
+  public async getChatResponse(
+    messages: GlobalChannelMessage[]
+  ): Promise<GlobalChannelMessage> {
     try {
       const response = await this.model.getChatResponse({
         messages,
@@ -159,10 +171,12 @@ export default class Assistant {
     conversation_id: string;
   }): Promise<boolean> {
     try {
-      console.log("Starting assistant response: ", messages);
-
-      if (this.agentManager.messageBelongsToAgent(messages[messages.length - 1])) {
-        return this.agentManager.recieveAgentMessage(messages[messages.length - 1]);
+      if (
+        this.agentManager.messageBelongsToAgent(messages[messages.length - 1])
+      ) {
+        return this.agentManager.recieveAgentMessage(
+          messages[messages.length - 1]
+        );
       }
 
       const pipelineResponse = await this.pipeline.userMessage({
