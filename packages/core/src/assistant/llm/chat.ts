@@ -17,6 +17,7 @@ export interface OpenAIOptions {
   apiKey: string;
   agentModel?: AllowedOpenAIChatModels;
   planningModel?: AllowedOpenAIChatModels;
+  baseURL?: string;
 }
 
 export class OpenAIChatModel extends ChatModel<Tool> {
@@ -26,13 +27,14 @@ export class OpenAIChatModel extends ChatModel<Tool> {
   public static readonly DEFAULT_AGENT_MODEL = "gpt-4";
   public static readonly DEFAULT_PLANNING_MODEL = "gpt-4";
 
-  constructor({ apiKey, agentModel, planningModel }: OpenAIOptions) {
+  constructor({ apiKey, agentModel, planningModel, baseURL }: OpenAIOptions) {
     super();
     this.agentModel = agentModel || OpenAIChatModel.DEFAULT_AGENT_MODEL;
     this.planningModel =
       planningModel || OpenAIChatModel.DEFAULT_PLANNING_MODEL;
     this.client = new OpenAI({
       apiKey,
+      ...((baseURL && { baseURL }) || {}),
     });
   }
 
