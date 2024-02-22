@@ -29,7 +29,7 @@ export class FileService extends Assistant.Service {
             name: "readFileAsString",
             description: "read a file and get a string as a response",
             parameters: {
-              type: "string",
+              type: "object",
               properties: {
                 path: {
                   type: "string",

@@ -1,6 +1,6 @@
 import { ChannelManager } from "../channels";
 import { ServiceManager } from "../services";
-import { Channel, GlobalChannelMessage } from "../channels/construct";
+import { Channel } from "../channels/construct";
 import { OpenAIChatModel } from "./llm/chat";
 import { Service } from "../services/construct";
 import { Pipeline } from "./pipeline";
@@ -8,6 +8,7 @@ import { PlanOfAction } from "./agents/planofaction";
 import { mkdirSync, writeFileSync } from "fs";
 import { Agent } from "./agents/agent";
 import { AgentManager } from "./agents";
+import { GlobalChannelMessage } from "../types/main";
 
 export type AvailableModels = OpenAIChatModel;
 
@@ -18,6 +19,8 @@ export interface AssistantOptions {
   model: AvailableModels;
   // The directory to store the assistant's data.
   datastoreDirectory: string;
+  // A description of the assistant's personality and role
+  description: string;
   // Whether to log assistant actions and metadata.
   log?: boolean;
   // Assistant responses will be complex and verbose, mostly useful for debugging.
@@ -36,6 +39,7 @@ export default class Assistant {
   private datastoreDirectory: string;
   private log: boolean;
   private verbose: boolean;
+  private description: string;
   public static Channel = Channel;
   public static Service = Service;
   public static PlanOfAction = PlanOfAction;
@@ -48,12 +52,14 @@ export default class Assistant {
     name,
     model,
     datastoreDirectory,
+    description,
     log,
     verbose,
   }: AssistantOptions) {
     this.name = name;
     this.model = model;
     this.datastoreDirectory = datastoreDirectory;
+    this.description = description;
     this.verbose = verbose ?? false;
     this.log = log ?? true;
     this.channelManager = new ChannelManager({ assistant: this });
@@ -73,6 +79,10 @@ export default class Assistant {
     return this.name;
   }
 
+  public Verbosity(): boolean {
+    return this.verbose;
+  }
+
   public ChannelManager(): ChannelManager {
     return this.channelManager;
   }
@@ -87,6 +97,10 @@ export default class Assistant {
 
   public Model() {
     return this.model;
+  }
+
+  public Description() {
+    return this.description;
   }
 
   public Pipeline() {

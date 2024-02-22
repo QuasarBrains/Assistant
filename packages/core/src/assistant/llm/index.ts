@@ -1,9 +1,14 @@
 /* eslint-disable no-unused-vars */
 import Assistant from "..";
-import { GlobalChannelMessage } from "../../channels/construct";
-import { PlanOfAction } from "../agents/planofaction";
+import {
+  DiscreteActionDerivedFromMessage,
+  DiscreteActionsGrouped,
+  GlobalChannelMessage,
+  Module,
+  ModuleMethod,
+} from "../../types/main";
 
-export abstract class ChatModel {
+export abstract class ChatModel<Tool = unknown> {
   private assistant: Assistant | undefined;
 
   public Assistant() {
@@ -13,6 +18,8 @@ export abstract class ChatModel {
   public registerAssistant(assistant: Assistant) {
     this.assistant = assistant;
   }
+
+  public abstract getCleanedMessages(messages: GlobalChannelMessage[]): any[];
 
   public abstract getChatResponseSimple({
     message,
@@ -28,9 +35,7 @@ export abstract class ChatModel {
     messages: GlobalChannelMessage[];
   }): Promise<GlobalChannelMessage>;
 
-  public abstract generatePlanOfAction(
-    messages: GlobalChannelMessage[]
-  ): Promise<PlanOfAction | undefined>;
+  public abstract modulesToTools(modules: Module[]): Tool[];
 
   public abstract makeBooleanDecision(
     decisionDescription: string
@@ -40,4 +45,19 @@ export abstract class ChatModel {
     decisionDescription: string,
     options: { label: string; value: T }[]
   ): Promise<{ decision: T; reason: string } | undefined>;
+
+  public abstract getDiscreteActions(
+    prompt: string
+  ): Promise<DiscreteActionsGrouped | undefined>;
+
+  public abstract getActionToPerformForDiscreteAction(
+    discreteAction: DiscreteActionDerivedFromMessage,
+    tools: Tool[],
+    additionalInfo: string
+  ): Promise<
+    | (ModuleMethod & {
+        arguments: string;
+      })
+    | undefined
+  >;
 }

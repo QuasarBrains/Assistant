@@ -14,28 +14,7 @@ export default class AgentService extends Service {
       description:
         "A generic service for performing common actions such as recording to memory and others.",
       schema: {
-        methods: [
-          {
-            name: "recordToContext",
-            description:
-              "Record a key value pair to the agent's current context which will be accessible to further actions.",
-            parameters: {
-              type: "object",
-              properties: {
-                key: {
-                  type: "string",
-                  description: "The key to record.",
-                },
-                value: {
-                  type: "string",
-                  description: "The value to record.",
-                },
-              },
-            },
-            performAction: (params: { key: string; value: string }) =>
-              this.recordToContext(params),
-          },
-        ],
+        methods: [],
       },
     });
     this.agent = agent;

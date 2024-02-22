@@ -41,7 +41,6 @@ body {
     padding: 0;
     padding: 24px;
     font-size: 16px;
-    border-top: 1px solid var(--contrast);
 
     @media screen and (min-width: 768px) {
       padding: 24px 20%;
@@ -54,5 +53,12 @@ body {
 
   .user {
     background-color: var(--background-color);
+  }
+
+  .log {
+    // background-color: var(--background-color);
+    padding-left: 14px;
+    // color: var(--contrast);
+    border-left: 2px solid var(--contrast);
   }
 }

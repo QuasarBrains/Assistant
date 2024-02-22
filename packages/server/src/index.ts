@@ -1,8 +1,5 @@
 import Express, { Router } from "express";
-import Assistant, {
-  Channel,
-  GlobalChannelMessage,
-} from "@quasarbrains/assistant";
+import Assistant, { Channel, GlobalChannelMessage } from "@quasarbrains/assistant";
 import routes from "./routes";
 import axios from "axios";
 
@@ -10,7 +7,6 @@ import axios from "axios";
  * Represents the options for the Server class.
  */
 export interface ServerOptions {
-  port: number; // The port number on which the server should listen.
   assistant: Assistant; // The assistant instance to use.
   webhook_url: string; // The webhook URL the server channel will use to send messages.
   log?: boolean; // Indicates whether server logs should be enabled.
@@ -21,7 +17,6 @@ export interface ServerOptions {
  */
 export default class Server {
   private router: Router;
-  private port: number;
   private log = true;
   private assistant: Assistant;
   private serverChannel: Channel;
@@ -43,9 +38,8 @@ export default class Server {
    * Creates a new instance of the Server class.
    * @param {ServerOptions} options - The server options.
    */
-  constructor({ port, log, assistant, webhook_url }: ServerOptions) {
+  constructor({ log, assistant, webhook_url }: ServerOptions) {
     this.router = Router();
-    this.port = port;
     this.log = log || true;
     this.assistant = assistant;
     this.webhook_url = webhook_url;
@@ -130,10 +124,7 @@ export default class Server {
         return this.serverHistory;
       },
       defineConversationHistory: (history) => {
-        this.defineConversationHistory(
-          history.conversation_id,
-          history.messages
-        );
+        this.defineConversationHistory(history.conversation_id, history.messages);
       },
       getConversationHistory: (conversation_id, count) => {
         return this.getConversationHistory(conversation_id, count);

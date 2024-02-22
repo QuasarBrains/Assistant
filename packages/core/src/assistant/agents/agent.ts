@@ -1,68 +1,52 @@
-import path from "path";
 import { AgentManager } from ".";
-import Assistant, { Channel, Service } from "..";
-import { Module, ModuleMethod } from "../../types/main";
+import { Channel, Service } from "..";
+import { DiscreteActionGroup, Module } from "../../types/main";
 import { ChatModel } from "../llm";
-import { PlanOfAction, Step } from "./planofaction";
 import { randomBytes } from "crypto";
-import { parseDateYYYYMMDD, parseTimeHHMM } from "../../utils/dates";
-import { format } from "prettier";
-import { GlobalChannelMessage } from "../../channels/construct";
-import { Pipeline } from "../pipeline";
-import { sanitizeFileName } from "../../utils/sanitization";
+import { GlobalChannelMessage } from "../../types/main";
 import AgentService from "./services/agentService";
 
-export interface AssistantOptions {
+export interface AgentOptions {
   name: string;
   model: ChatModel;
-  planOfAction: PlanOfAction;
   primaryChannel: Channel;
   primaryConversationId: string;
+  actionGroup: DiscreteActionGroup;
   verbose?: boolean;
-  maxSectionLength?: number;
-  maxStepRetries?: number;
 }
 
 export class Agent {
   private name: string;
   private model: ChatModel;
-  private planOfAction: PlanOfAction;
   private manager: AgentManager | undefined;
   private primaryChannel: Channel;
   private primaryConversationId: string;
   private verbose: boolean;
-  private paused: boolean = false;
-  private maxSectionLength: number;
-  private maxStepRetries: number;
   private agentContext: { [key: string]: string } = {};
-  private pipeline: Pipeline;
-  private awaitingClarification: boolean = false;
   private agentService: Service;
+  private actionGroup: DiscreteActionGroup;
+  private currentAction: number = 0;
+  private userMessages: GlobalChannelMessage[] = [];
+  private actionHistory: string[] = [];
+  private paused: boolean = false;
+  private done: boolean = false;
 
   constructor({
     name,
     model,
-    planOfAction,
     primaryChannel,
     primaryConversationId,
     verbose,
-    maxSectionLength,
-    maxStepRetries,
-  }: AssistantOptions) {
+    actionGroup,
+  }: AgentOptions) {
     this.name = name;
     this.model = model;
-    this.planOfAction = planOfAction;
     this.primaryChannel = primaryChannel;
     this.primaryConversationId = primaryConversationId;
     this.verbose = verbose ?? false;
-    this.maxSectionLength = maxSectionLength ?? 100;
-    this.maxStepRetries = maxStepRetries ?? 3;
-    this.pipeline = new Pipeline({
-      assistant: this.manager?.Assistant() as Assistant,
-      verbose: this.verbose,
-      agent: this,
-    });
+    this.actionGroup = actionGroup;
     this.agentService = new AgentService({ agent: this });
+    this.userMessages = [];
   }
 
   public static getRandomNewName() {
@@ -85,38 +69,6 @@ export class Agent {
     return this.primaryChannel;
   }
 
-  public isPaused(): boolean {
-    return this.paused;
-  }
-
-  public pause() {
-    this.paused = true;
-  }
-
-  public resume() {
-    this.paused = false;
-    this.run();
-  }
-
-  public async generatePlanOfAction() {
-    try {
-      const conversationHistory = this.primaryChannel.getConversationHistory(
-        this.primaryConversationId
-      );
-      const planOfAction = await this.model.generatePlanOfAction(
-        conversationHistory
-      );
-
-      if (!planOfAction) {
-        throw new Error("No plan of action generated");
-      }
-      this.planOfAction = planOfAction;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
   public getAgentConversationHistory() {
     const history = this.primaryChannel.getAgentHistory(
       this.Name(),
@@ -125,67 +77,8 @@ export class Agent {
     return history;
   }
 
-  public record() {
-    const today = parseDateYYYYMMDD(new Date());
-    const now = parseTimeHHMM(new Date());
-    const outputFile = path.join(
-      "agents",
-      "records",
-      sanitizeFileName(
-        `${this.Name()}-${today}-${now}-${this.planOfAction
-          .Title()
-          .toUpperCase()}.md`
-      )
-    );
-    const poaMarkdown = this.planOfAction.getMarkdown();
-    const output = `${poaMarkdown}\n\n${this.getAgentConversationHistory().join(
-      "\n"
-    )}`;
-    this.manager
-      ?.Assistant()
-      ?.recordToDatastore(outputFile, format(output, { parser: "markdown" }));
-  }
-
-  public async kill(reason: "ABORTED" | "FAILED" | "COMPLETED") {
-    if (this.verbose) {
-      this.sendPrimaryChannelMessage(`I have been killed because: "${reason}"`);
-    }
-    if (reason === "COMPLETED") {
-      this.planOfAction.markCompleted();
-    } else {
-      this.planOfAction.markFinished(reason);
-    }
-    this.record();
-  }
-
-  public async complete() {
-    this.planOfAction.markCompleted();
-    this.record();
-    await this.kill("COMPLETED");
-    if (this.verbose) {
-      this.sendPrimaryChannelMessage(
-        `I have completed the task: "${this.planOfAction.Title()}"`
-      );
-    }
-  }
-
-  public async finish(reason: "ABORTED" | "FAILED") {
-    this.planOfAction.markFinished(reason);
-    this.record();
-    await this.kill(reason);
-    if (this.verbose) {
-      this.sendPrimaryChannelMessage(
-        `I have failed to complete the task: "${this.planOfAction.Title()}"`
-      );
-    }
-  }
-
   public registerManager(manager: AgentManager) {
     this.manager = manager;
-  }
-
-  public getPlanOfAction() {
-    return this.planOfAction;
   }
 
   public modulesAvailable(): Module[] {
@@ -227,11 +120,27 @@ export class Agent {
     return map;
   }
 
-  public async sendPrimaryChannelMessage(message: string) {
+  public init(options?: { generate_name?: boolean }) {
+    if (options?.generate_name) {
+      const name = Agent.getRandomNewName();
+      this.name = name;
+    }
+  }
+
+  public start() {
+    this.sendGreetingMessage();
+    this.agentProcess();
+  }
+
+  public async sendPrimaryChannelMessage(
+    message: string,
+    type: GlobalChannelMessage["type"] = "text"
+  ) {
     try {
       await this.primaryChannel.sendMessageAsAssistant(
         {
           content: `${this.FormattedAgentName()}: ${message}`,
+          type,
         },
         this.primaryConversationId
       );
@@ -242,41 +151,11 @@ export class Agent {
     }
   }
 
-  public async getClarificationFromUser(clarification: string) {
-    try {
-      this.sendPrimaryChannelMessage(clarification);
-      this.pause();
-      this.awaitingClarification = true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
   public async recieveMessage() {
     try {
       const history = this.getAgentConversationHistory();
-      const response = await this.startAgentResponse({
-        messages: history,
-      });
-      return response;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
 
-  public async startAgentResponse({
-    messages,
-  }: {
-    messages: GlobalChannelMessage[];
-  }): Promise<boolean> {
-    try {
-      const pipelineResponse = await this.pipeline.userMessageToAgent({
-        messages,
-      });
-
-      return pipelineResponse;
+      this.userMessages.push(history[history.length - 1]);
     } catch (error) {
       console.error(error);
       return false;
@@ -286,56 +165,11 @@ export class Agent {
   public async sendGreetingMessage() {
     try {
       await this.sendPrimaryChannelMessage(
-        `Hello! I'm ${this.FormattedAgentName()}!
-        
-        I have been initialized to complete the following task:
-        "${this.planOfAction.Title()}"
-        `
+        `${this.FormattedAgentName()} has been initialized to complete the following task:
+        "${JSON.stringify(this.actionGroup)}"
+        `,
+        "log"
       );
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
-  public async init() {
-    try {
-      this.sendGreetingMessage();
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
-  public async start() {
-    try {
-      if (this.verbose) {
-        await this.sendPrimaryChannelMessage("Starting agent loop...");
-      }
-      this.run();
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
-  public async initAndStart() {
-    try {
-      await this.init();
-      this.start();
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
-  public async run() {
-    try {
-      this.runStep();
       return true;
     } catch (error) {
       console.error(error);
@@ -350,601 +184,99 @@ export class Agent {
   public getContextAsString() {
     let str = "";
     Object.keys(this.agentContext).forEach((key) => {
-      str += `${key}: ${this.getShortenedString(this.agentContext[key])}\n`;
+      str += `${key}: ${this.agentContext[key]}\n`;
     });
     return str;
   }
 
-  public getPostActions() {
-    return [
-      {
-        name: "add_to_context",
-        description:
-          "Add information to the current context, allowing for subsequent steps to read it.",
-        parameters: {
-          type: "object",
-          properties: {
-            key: {
-              type: "string",
-              description:
-                "the name that the value will be stored under in the context",
-            },
-            value: {
-              type: "string",
-              description: "the value to store in the context",
-            },
-          },
-          required: ["key", "value"],
-        },
-      },
-      {
-        name: "none",
-        description: "Do nothing. Nothing is required to be done.",
-        parameters: {},
-      },
-    ];
-  }
-
-  public getFinishActions = () => {
-    return [
-      {
-        name: "mark_completed_and_move_on",
-        description:
-          "Mark the current step as completed, and move on to the next step.",
-        parameters: {
-          type: "object",
-          properties: {},
-          required: [],
-        },
-      },
-      {
-        name: "mark_failed_and_move_on",
-        description:
-          "Mark the current step as failed, and move on to the next step.",
-        parameters: {
-          type: "object",
-          properties: {},
-          required: [],
-        },
-      },
-      {
-        name: "retry_current_step",
-        description: "Retry the current step.",
-        parameters: {
-          type: "object",
-          properties: {},
-          required: [],
-        },
-      },
-    ];
-  };
-
-  public async runStep(): Promise<boolean> {
-    try {
-      if (this.planOfAction.isCompleted()) {
-        this.complete();
-        return true;
-      }
-      if (this.planOfAction.isFinished()) {
-        this.finish("FAILED");
-        return true;
-      }
-      if (this.isPaused()) {
-        if (this.verbose) {
-          this.sendPrimaryChannelMessage(
-            `Agent is paused, not running step ${this.planOfAction.DescribeCurrentStep()}`
-          );
-        }
-        return false;
-      }
-      if (this.planOfAction.getCurrentStep().retries > this.maxStepRetries) {
-        this.planOfAction.markCurrentStepFinished("FAILED");
-        if (this.verbose) {
-          this.sendPrimaryChannelMessage(
-            `Marked step ${this.planOfAction.DescribeCurrentStep()} as failed for too many retries, and moving on to the next step...`
-          );
-        }
-        return this.runStep();
-      }
-      if (this.verbose) {
-        this.sendPrimaryChannelMessage(
-          `Running current step: ${this.planOfAction.DescribeCurrentStep(true)}`
-        );
-      }
-      const currentStep = this.planOfAction.getCurrentStep();
-      const nextAction = await this.getNextActionFromStep(currentStep);
-      if (!nextAction) {
-        this.finish("FAILED");
-        return false;
-      }
-      const result = await this.performAction(nextAction);
-      if (this.verbose) {
-        this.sendPrimaryChannelMessage(
-          `Result of ${nextAction.name} action: ${JSON.stringify(result)}`
-        );
-      }
-      this.planOfAction.getCurrentStep().actionOutput = result;
-      const postActionDecision = await this.getPostActionDecision();
-      if (postActionDecision) {
-        switch (postActionDecision.function_to_perform) {
-          case "add_to_context":
-            this.addToContext(
-              postActionDecision.withArgs.key,
-              postActionDecision.withArgs.value
-            );
-            this.planOfAction.getCurrentStep().context +=
-              "\nAction result added to agent context successfully.";
-            if (this.verbose) {
-              this.sendPrimaryChannelMessage(
-                `Added ${
-                  postActionDecision.withArgs.key
-                } to context with value for step ${this.planOfAction.DescribeCurrentStep()}`
-              );
-            }
-            break;
-          case "none":
-            break;
-          default:
-            throw new Error(
-              `Unknown post action decision: ${postActionDecision.function_to_perform}`
-            );
-        }
-      }
-      const finishDecision = await this.getFinishDecision();
-      if (finishDecision) {
-        switch (finishDecision.function_to_perform) {
-          case "mark_completed_and_move_on":
-            this.planOfAction.markCurrentStepCompleted();
-            if (this.verbose) {
-              this.sendPrimaryChannelMessage(
-                `Marked step ${this.planOfAction.DescribeCurrentStep()} as completed, and moving on to the next step...`
-              );
-            }
-            return this.runStep();
-          case "mark_failed_and_move_on":
-            this.planOfAction.markCurrentStepFinished("FAILED");
-            if (this.verbose) {
-              this.sendPrimaryChannelMessage(
-                `Marked step ${this.planOfAction.DescribeCurrentStep()} as failed, and moving on to the next step...`
-              );
-            }
-            return this.runStep();
-          case "retry_current_step":
-            if (this.verbose) {
-              this.sendPrimaryChannelMessage("Retrying current step...");
-            }
-            this.planOfAction.getCurrentStep().retries =
-              (this.planOfAction.getCurrentStep().retries || 0) + 1;
-            return this.runStep();
-        }
-      } else {
-        if (this.verbose) {
-          this.sendPrimaryChannelMessage(
-            `No finish decision made for step ${this.planOfAction.DescribeCurrentStep()}`
-          );
-        }
-        this.finish("FAILED");
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error(error);
+  public finish() {
+    this.done = true;
+    if (this.verbose) {
       this.sendPrimaryChannelMessage(
-        `An error occurred while trying to run step ${this.planOfAction.DescribeCurrentStep(
-          true
-        )}`
+        `${this.FormattedAgentName()} has finished.`,
+        "log"
       );
-      this.finish("FAILED");
-      return false;
+      this.sendPrimaryChannelMessage(
+        `Action history:\n${this.actionHistory.join("\n")}`,
+        "log"
+      );
     }
   }
 
-  public async getNextActionFromStep(step: Step) {
+  public async agentProcess(): Promise<boolean> {
     try {
-      const moduleDecision = await this.model.makeSelectionDecision<string>(
-        `
-        The decision is what module to use, given a set of options and the current task to be completed.
-        Each module has a "type", a "name" and a "description" which will help you determine which one is the most relavent.
+      if (!this.actionGroup) {
+        console.error("No action group.");
+        return false;
+      }
 
-        Keep in mind the different module types available to you: Channels and Services.
-        A "Channel" is used to communicate with the user, whereas a "Service" is used to perform some action.
-        Channels should always be used for direct communication with the user, and almost never other than that. 
-        Services can be used for anything else.
-        Also, keep in mind that the (*PRIMARY CHANNEL) is the channel that the user is currently communicating with you on, so usually it should be used unless another channel makes more sense.
+      if (this.paused) {
+        return false;
+      }
 
-        The most important thing is that the Channel or Service chosen is relavent and suitable to completing the task.
-        If no modules seem suitable to complete the task, you should choose "none".
+      if (this.done) {
+        return true;
+      }
 
-        Tasks are a high-level description of what needs to be done, whereas steps are a more granular sub-task that needs to be completed as part of the greater task.
-        You should focus on the current step, but the task is provided for context.
+      if (this.currentAction >= this.actionGroup.actions.length) {
+        this.finish();
+        return true;
+      }
 
-        The current task is: "${this.planOfAction.Title()}"
-        The current step is: "${step.description}"
+      const unreadMessages = this.userMessages;
+      this.userMessages = [];
 
-        The source messages of this generated task are:
-        ${this.planOfAction
-          .SourceMessages()
-          .map((m) => {
-            return `- ${m.role}: ${m.content}`;
-          })
-          .join("\n")}
-        `,
-        this.modulesAvailable().map((a) => {
-          return {
-            label: `[${a.type.toUpperCase()}] ${a.name} - ${a.description}`,
-            value: a.name,
-          };
-        })
+      const action = this.actionGroup.actions[this.currentAction];
+
+      const perception = `
+      Here is some additional context for your reference:
+      ${this.getContextAsString()}
+      ---
+      Latest messages:
+      ${unreadMessages.map((m) => m.content).join("\n")}
+      `;
+
+      const tools = this.model.modulesToTools(this.modulesAvailable());
+
+      const response = await this.model.getActionToPerformForDiscreteAction(
+        action,
+        tools,
+        perception
       );
-
-      if (!moduleDecision) {
-        return null;
-      }
-
-      const { decision, reason } = moduleDecision;
-
-      if (this.verbose) {
-        this.sendPrimaryChannelMessage(
-          `${decision} was chosen because "${reason}"`
-        );
-      }
-
-      if (decision === "none") {
-        return null;
-      }
-
-      const map = this.modulesMap();
-
-      const module = map[decision];
-
-      const moduleAction = await this.model.makeSelectionDecision<string>(
-        `
-        The action is what to do with the module, given a set of options and the current task to be completed.
-        Each module has a set of actions that can be performed, which will help you determine which one is the most relavent.
-
-        The most important thing is that the action chosen is relavent and suitable to completing the task.
-        If no actions seem suitable to complete the task, you should choose "none".
-
-        Tasks are a high-level description of what needs to be done, whereas steps are a more granular sub-task that needs to be completed as part of the greater task.
-        You should focus on the current step, but the task is provided for context.
-
-        The current task is: "${this.planOfAction.Title()}"
-        The current step is: "${step.description}"
-
-        The source messages of this generated task are:
-        ${this.planOfAction
-          .SourceMessages()
-          .map((m) => {
-            return `- ${m.role}: ${m.content}`;
-          })
-          .join("\n")}
-        `,
-        module.schema.methods.map((a) => {
-          return {
-            label: a.description,
-            value: a.name,
-          };
-        })
-      );
-
-      if (!moduleAction) {
-        return null;
-      }
-
-      const { decision: actionDecision, reason: actionReason } = moduleAction;
-
-      if (this.verbose) {
-        this.sendPrimaryChannelMessage(
-          `${actionDecision} was chosen because "${actionReason}"`
-        );
-      }
-
-      if (actionDecision === "none") {
-        return null;
-      }
-
-      const actionableMethod = module["schema"]["methods"].find(
-        (m) => m.name === actionDecision
-      );
-
-      if (!actionableMethod) {
-        throw new Error(
-          `Could not find module with name ${decision} and type ${module.type}`
-        );
-      }
-
-      return actionableMethod;
-    } catch (error) {
-      console.error(error);
-      this.sendPrimaryChannelMessage(
-        `An error occurred while trying to get the next action from step ${step.description}`
-      );
-      return null;
-    }
-  }
-
-  public async performAction(action: ModuleMethod) {
-    try {
-      const planningModel = this.manager?.Assistant()?.Model().PlanningModel();
-
-      if (!planningModel) {
-        throw new Error("No assistant found");
-      }
-
-      const response = await this.manager
-        ?.Assistant()
-        ?.Model()
-        .createChatCompletion({
-          model: planningModel,
-          messages: [
-            {
-              role: "system",
-              content: `
-            You are an action caller.
-            Based on the context provided to you, and a task description, you will provide arguments to a given function.
-
-            Keep in mind that the task is the overarching goal, whereas the step is the current sub-task that needs to be completed.
-            You should pay the most attention to the current step, as the function to call has been chosen to complete it.
-            `,
-            },
-            {
-              role: "user",
-              content: `
-            The current task to perform is:
-            ${this.planOfAction.Title()}
-
-            The current step to perform is:
-            ${this.planOfAction.DescribeCurrentStep(true)}
-
-            The source messages of this task are:
-            ${this.planOfAction
-              .SourceMessages()
-              .map((m) => {
-                return `- ${m.role}: ${m.content}`;
-              })
-              .join("\n")}
-            `,
-            },
-          ],
-          functions: [
-            {
-              name: action.name,
-              description: action.description,
-              parameters: action.parameters,
-            },
-          ],
-          function_call: {
-            name: action.name,
-          },
-        });
 
       if (!response) {
-        throw new Error("No response received from model");
+        console.error("No response.");
+        return false;
       }
 
-      const args = response.choices[0].message?.function_call?.arguments;
+      const { performAction, arguments: args, name } = response;
+      const parsedArgs = { ...JSON.parse(args), agent: this.Name() };
 
-      if (!args) {
-        throw new Error("No arguments received from model");
+      if (name === "usePrimaryChannel") {
+        const message = parsedArgs.message;
+        this.sendPrimaryChannelMessage(message);
+        this.currentAction += 1;
+        return this.agentProcess();
       }
 
-      const parsedArgs = JSON.parse(args);
-
-      const result = await action.performAction(parsedArgs);
-
-      return result;
-    } catch (error) {
-      console.error(error);
-      return undefined;
-    }
-  }
-
-  public getShortenedString(str: string) {
-    if (!str) {
-      return str;
-    }
-    const maxLength = this.maxSectionLength;
-    if (str.length > maxLength) {
-      return `${str.slice(0, maxLength)}...`;
-    }
-    return str;
-  }
-
-  public async getPostActionDecision() {
-    try {
-      const planningModel = this.manager?.Assistant()?.Model().PlanningModel();
-
-      if (!planningModel) {
-        throw new Error("No assistant found");
-      }
-
-      const actions = this.getPostActions();
-
-      const actionDecision = await this.manager
-        ?.Assistant()
-        ?.Model()
-        .createChatCompletion({
-          model: planningModel,
-          messages: [
-            {
-              role: "system",
-              content: `
-              Given the result of an action in relation to a task, you will decide what to do with the result.
-              The most important thing is that the action chosen is relavent and suitable to completing the task.
-              If no actions seem suitable to complete the task, you should choose "none".
-
-              Tasks are a high-level description of what needs to be done, whereas steps are a more granular sub-task that needs to be completed as part of the greater task.
-              You should focus on the current step, but the task is provided for context.
-              `,
-            },
-            {
-              role: "user",
-              content: `
-              The current task is: "${this.planOfAction.Title()}"
-              The current step is: "${this.planOfAction.DescribeCurrentStep(
-                true
-              )}"
-              The full task list is:
-              ${this.planOfAction
-                .Steps()
-                .map((s) => {
-                  return `- ${s.description}`;
-                })
-                .join("\n")}
-              The output of the action performed for the current step was: ${this.getShortenedString(
-                JSON.stringify(this.planOfAction.getCurrentStep().actionOutput)
-              )}
-
-              The source messages of this generated task are:
-              ${this.planOfAction
-                .SourceMessages()
-                .map((m) => {
-                  return `- ${m.role}: ${m.content}`;
-                })
-                .join("\n")}
-        `,
-            },
-          ],
-          functions: actions.map((a) => {
-            return {
-              ...a,
-            };
-          }),
-        });
-
-      if (!actionDecision) {
-        return {
-          function_to_perform: "none",
-          withArgs: undefined,
-        };
-      }
-
-      const function_call = actionDecision.choices[0]?.message?.function_call;
-
-      if (this.verbose) {
-        this.sendPrimaryChannelMessage(
-          `Post action decision for ${
-            this.planOfAction.getCurrentStep().description
-          }: ${function_call?.name}`
-        );
-      }
-
-      if (!function_call || function_call?.name === "none") {
-        return {
-          function_to_perform: "none",
-          withArgs: undefined,
-        };
-      }
-
-      const withArgs = function_call?.arguments
-        ? JSON.parse(function_call?.arguments)
-        : undefined;
-
-      return {
-        function_to_perform: function_call?.name,
-        withArgs,
-      };
-    } catch (error) {
-      console.error(error);
-      return {
-        function_to_perform: "none",
-        withArgs: undefined,
-      };
-    }
-  }
-
-  public async getFinishDecision() {
-    try {
-      const planningModel = this.manager?.Assistant()?.Model().PlanningModel();
-
-      if (!planningModel) {
-        throw new Error("No assistant found");
-      }
-
-      const actions = this.getFinishActions();
-      const actionDecision = await this.model.makeSelectionDecision<string>(
-        `
-      The decision is what to do with the result of an action in relation to a task.
-      The most important thing is that the action chosen reflects the result of the action in relation to the task.
-
-      Tasks are a high-level description of what needs to be done, whereas steps are a more granular sub-task that needs to be completed as part of the greater task.
-      You should focus on the current step, but the task is provided for context.
-
-      The current task is: "${this.planOfAction.Title()}"
-      The current step is: "${this.planOfAction.DescribeCurrentStep(true)}"
-      The full task list is:
-      ${this.planOfAction
-        .Steps()
-        .map((s) => {
-          return `- ${s.description}`;
-        })
-        .join("\n")}
-      The output of the action performed for the current step was: ${this.getShortenedString(
-        JSON.stringify(this.planOfAction.getCurrentStep().actionOutput)
-      )}
-      `,
-        actions.map((a) => {
-          return {
-            label: a.description,
-            value: a.name,
-          };
-        })
+      const output = await performAction(parsedArgs);
+      this.actionHistory.push(
+        `For action "${action.defined}": Performed action "${name}" with arguments: ${args}`
       );
-
-      if (!actionDecision) {
-        return {
-          function_to_perform: "mark_failed_and_move_on",
-        };
-      }
-
-      const { decision, reason } = actionDecision;
+      this.addToContext(`${name}_${action.defined}`, output);
 
       if (this.verbose) {
         this.sendPrimaryChannelMessage(
-          `Finish decision for ${
-            this.planOfAction.getCurrentStep().description
-          }: ${decision} because "${reason}"`
+          `Performed action ${name} with arguments ${JSON.stringify(
+            args
+          )} and output: ${output}`,
+          "log"
         );
       }
 
-      if (!decision) {
-        return {
-          function_to_perform: "mark_failed_and_move_on",
-        };
-      }
+      this.currentAction += 1;
 
-      return {
-        function_to_perform: decision,
-      };
-    } catch (error) {
-      console.error(error);
-      return {
-        function_to_perform: "mark_failed_and_move_on",
-      };
-    }
-  }
-
-  public async getConversationalResponse() {
-    try {
-      const history = this.getAgentConversationHistory();
-      const response = await this.model.getChatResponse({ messages: history });
-      this.sendPrimaryChannelMessage(response.content);
-      return false;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  }
-
-  public async getActionResponse() {
-    try {
-      if (this.awaitingClarification) {
-        this.awaitingClarification = false;
-        this.resume();
-        return true;
-      }
-      return false;
+      return this.agentProcess();
     } catch (error) {
       console.error(error);
       return false;

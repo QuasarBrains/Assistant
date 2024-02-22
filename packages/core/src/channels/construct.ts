@@ -1,12 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { ChannelManager } from ".";
-import { Module } from "../types/main";
+import { GlobalChannelMessage, Module } from "../types/main";
 
-export type GlobalChannelMessage = {
-  content: string;
-  role: "system" | "user" | "assistant";
-  agent?: string;
-};
 export interface ChannelOptions {
   name: string;
   description: string;
@@ -109,7 +104,7 @@ export class Channel {
             this.getConversationHistory(params.conversation_id, params.count),
         },
         {
-          name: "get_full_history",
+          name: "getFullHistory",
           description: "Returns the full history of the channel.",
           parameters: {
             type: "object",
@@ -119,7 +114,7 @@ export class Channel {
           performAction: () => this.getFullHistory(),
         },
         {
-          name: "send_message",
+          name: "sendMessage",
           description: "Sends a message to the channel.",
           parameters: {
             type: "object",
@@ -137,8 +132,24 @@ export class Channel {
             },
             required: ["message"],
           },
-          performAction: (params: { message: GlobalChannelMessage }) =>
-            this.sendMessageAsAssistant(params.message, "default"),
+          performAction: (params: { message: GlobalChannelMessage }) => {
+            if (!params.message) {
+              this.sendMessageAsAssistant(
+                {
+                  type: "text",
+                  content: "An error occured when trying to send a message.",
+                },
+                "default"
+              );
+            }
+            this.sendMessageAsAssistant(
+              {
+                ...params.message,
+                type: "text",
+              },
+              "default"
+            );
+          },
         },
       ],
     };
@@ -215,7 +226,7 @@ export class Channel {
       this.recieveMessage(message, conversation_id);
       const history = this.getConversationHistory(conversation_id);
       const response = await this.manager?.Assistant()?.startAssistantResponse({
-        messages: [...history, message],
+        messages: [...history],
         channel: this,
         conversation_id,
       });

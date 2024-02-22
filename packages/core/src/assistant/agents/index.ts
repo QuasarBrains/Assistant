@@ -1,6 +1,8 @@
 import Assistant from "..";
-import { GlobalChannelMessage } from "../../channels/construct";
+import { DiscreteActionGroup, GlobalChannelMessage } from "../../types/main";
 import { Agent } from "./agent";
+import { ChatModel } from "../llm";
+import { Channel } from "../../channels/construct";
 
 export interface AgentManagerOptions {
   assistant: Assistant;
@@ -11,10 +13,12 @@ export class AgentManager {
     [key: string]: Agent;
   } = {};
   private assistant: Assistant | undefined;
+  private verbose: boolean = false;
 
   constructor({ assistant }: AgentManagerOptions) {
     this.agents = {};
     this.assistant = assistant;
+    this.verbose = assistant.Verbosity();
   }
 
   public Assistant(): Assistant | undefined {
@@ -42,7 +46,8 @@ export class AgentManager {
     if (!agent) {
       throw new Error(`Agent with name ${agentName} not found.`);
     }
-    agent.initAndStart();
+    agent.init();
+    agent.start();
   }
 
   public getAgent(agentName: string): Agent {
@@ -51,35 +56,10 @@ export class AgentManager {
 
   public getAllAgentsDescribed() {
     const descriptions = Object.values(this.agents).map((agent) => {
-      return `- ${agent.Name()}: ${agent.getPlanOfAction().Describe()}`;
+      return `- ${agent.Name()}`;
     });
 
     return descriptions;
-  }
-
-  public pauseAgent(agentName: string) {
-    this.agents[agentName].pause();
-  }
-
-  public resumeAgent(agentName: string) {
-    this.agents[agentName].resume();
-  }
-
-  public pauseAllAgents() {
-    Object.values(this.agents).forEach((agent) => {
-      agent.pause();
-    });
-  }
-
-  public async killAgent(agentName: string) {
-    try {
-      await this.agents[agentName].kill("ABORTED");
-      delete this.agents[agentName];
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
   }
 
   public messageBelongsToAgent(message: GlobalChannelMessage) {
@@ -106,6 +86,35 @@ export class AgentManager {
     } catch (error) {
       console.error(error);
       return false;
+    }
+  }
+
+  public async dispatchAgentForActionGroup(
+    actionGroup: DiscreteActionGroup,
+    primaryChannel: Channel,
+    primaryConversationId: string
+  ) {
+    try {
+      if (!this.Assistant()) {
+        return undefined;
+      }
+      const name = Agent.getRandomNewName();
+      const agent = new Agent({
+        name,
+        model: this.Assistant()?.Model() as ChatModel,
+        primaryChannel,
+        actionGroup,
+        primaryConversationId,
+        verbose: this.verbose,
+      });
+
+      this.registerAgent(agent);
+      this.initAndStartAgent(agent.Name());
+
+      return agent;
+    } catch (err) {
+      console.error(err);
+      return undefined;
     }
   }
 }

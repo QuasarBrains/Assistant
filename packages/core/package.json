@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@types/node": "^20.4.2",
-    "openai-edge": "^1.2.0",
+    "openai": "^4.28.0",
     "prettier": "^2.5.1"
   },
   "bugs": {

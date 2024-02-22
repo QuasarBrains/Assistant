@@ -15,10 +15,7 @@ const getBodyFeatures = (req: Request) => {
 router.get("/", (req, res) => {
   const { assistant } = getBodyFeatures(req);
   res.send({
-    message:
-      "Welcome to the GPT Assistant server! My name is " +
-      assistant.Name() +
-      ".",
+    message: "Welcome to the GPT Assistant server! My name is " + assistant.Name() + ".",
   });
 });
 
@@ -26,8 +23,7 @@ router.post("/message", async (req, res) => {
   try {
     const { serverChannel } = getBodyFeatures(req);
     const message = req.body.message as string;
-    const conversation_id =
-      req.body.conversation_id || req.query.conversation_id;
+    const conversation_id = req.body.conversation_id || req.query.conversation_id;
 
     if (!message) {
       return res.status(400).send({
@@ -37,8 +33,7 @@ router.post("/message", async (req, res) => {
 
     if (!conversation_id) {
       return res.status(400).send({
-        message:
-          "No conversation_id provided. Add conversation_id to the query string or body.",
+        message: "No conversation_id provided. Add conversation_id to the query string or body.",
       });
     }
 
@@ -70,8 +65,7 @@ router.post("/message", async (req, res) => {
 router.get("/history", (req, res) => {
   try {
     const { serverChannel } = getBodyFeatures(req);
-    const conversation_id =
-      req.body.conversation_id || req.query.conversation_id;
+    const conversation_id = req.body.conversation_id || req.query.conversation_id;
     if (conversation_id) {
       const history = serverChannel.getConversationHistory(conversation_id);
       return res.send({

@@ -1,5 +1,5 @@
 import { format } from "prettier";
-import { GlobalChannelMessage } from "../../channels/construct";
+import { GlobalChannelMessage } from "../../types/main";
 import Assistant from "..";
 
 export interface Step {
